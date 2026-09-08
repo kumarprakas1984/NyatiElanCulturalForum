@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Hub - Nyati Elan Cultural Forum</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* Ganpati background image with subtle opacity */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://i.pinimg.com/originals/c4/1f/9a/c41f9a69e42d1f11a4e10f1c11578160.png');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.05;
+            z-index: -1;
+        }
+
+        .modal-backdrop,
+        #loader-overlay {
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+
+        .flat-grid {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .flat-btn {
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flat-btn .status-dot {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .flat-btn.empty {
+            background-color: #F3F4F6;
+            color: #374151;
+        }
+
+        .flat-btn.empty:hover {
+            background-color: #E5E7EB;
+            transform: translateY(-1px);
+        }
+
+        .flat-btn.empty .status-dot {
+            background-color: #9CA3AF;
+        }
+
+        .flat-btn.unpaid {
+            background-color: #FEF3C7;
+            color: #92400E;
+            font-weight: 600;
+        }
+
+        .flat-btn.unpaid:hover {
+            background-color: #FDE68A;
+            transform: translateY(-1px);
+        }
+
+        .flat-btn.unpaid .status-dot {
+            background-color: #F59E0B;
+        }
+
+        .flat-btn.paid {
+            background-color: #22c55e;
+            color: white;
+            font-weight: 600;
+        }
+
+        .flat-btn.paid:hover {
+            background-color: #16a34a;
+            transform: translateY(-1px);
+        }
+
+        .flat-btn.paid .status-dot {
+            background-color: #10B981;
+            box-shadow: 0 0 0 2px white;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .tab-btn {
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            border-bottom-color: #4f46e5;
+            color: #4f46e5;
+            font-weight: 700;
+        }
+
+        .sub-tab-btn {
+            transition: all 0.2s ease;
+        }
+
+        .sub-tab-btn.active {
+            background-color: #eef2ff;
+            color: #4f46e5;
+            font-weight: 600;
+        }
+
+        .photo-item {
+            aspect-ratio: 1 / 1;
+        }
+
+        .event-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+
+    <!-- Global Loader Overlay -->
+    <div id="loader-overlay"
+        class="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col items-center justify-center hidden">
+        <div class="loader mb-3"></div>
+        <p id="loader-text" class="text-sm font-medium text-gray-600">Connecting to cloud database...</p>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center flex-col p-4">
+        <div
+            class="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full text-center">
+            <div
+                class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">
+                <i class="fas fa-landmark"></i>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Nyati Elan Cultural Forum</h1>
+            <p class="text-gray-600 mb-8 text-sm">Community Portal & Management Hub</p>
+
+            <div class="flex justify-center mb-6">
+                <div id="gsi-button"></div>
+            </div>
+
+            <footer class="mt-8 text-xs text-gray-500 border-t pt-4">
+                <p class="mb-2">&copy; <span class="current-year">2026</span> Nyati Elan Cultural Forum</p>
+                <div class="space-x-3">
+                    <a href="./privacy.html" target="_blank" class="text-indigo-600 hover:underline">Privacy Policy</a>
+                    <span>•</span>
+                    <a href="./terms.html" target="_blank" class="text-indigo-600 hover:underline">Terms of Service</a>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="main-app" class="hidden flex-grow flex flex-col">
+        <div class="container mx-auto p-4 md:p-8 max-w-5xl flex-grow">
+            <!-- App Header -->
+            <header
+                class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 bg-white/80 backdrop-blur-sm p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-xl shadow-md">
+                        <i class="fas fa-hands-praying"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Community Hub</h1>
+                        <p id="user-greeting" class="text-xs md:text-sm text-gray-500 font-medium"></p>
+                    </div>
+                </div>
+                <button onclick="handleSignoutClick()"
+                    class="px-4 py-2 bg-red-50 text-red-600 border border-red-200 font-semibold rounded-lg hover:bg-red-100 transition text-sm flex items-center gap-2">
+                    <i class="fas fa-arrow-right-from-bracket"></i> Sign Out
+                </button>
+            </header>
+
+            <!-- Navigation Tabs -->
+            <div class="border-b border-gray-200 mb-8">
+                <nav class="-mb-px flex space-x-4 md:space-x-8 overflow-x-auto" aria-label="Tabs">
+                    <button id="admin-tab-btn" onclick="switchTab('admin')"
+                        class="tab-btn active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-base md:text-lg flex items-center gap-2">
+                        <i class="fas fa-user-shield text-sm"></i> Admin Dashboard
+                    </button>
+                    <button id="resident-tab-btn" onclick="switchTab('resident')"
+                        class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 border-transparent font-medium text-base md:text-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-sm"></i> Finance View
+                    </button>
+                    <button id="gallery-tab-btn" onclick="switchTab('gallery')"
+                        class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 border-transparent font-medium text-base md:text-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center gap-2">
+                        <i class="fas fa-images text-sm"></i> Gallery
+                    </button>
+                    <button id="events-tab-btn" onclick="switchTab('events')"
+                        class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 border-transparent font-medium text-base md:text-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center gap-2">
+                        <i class="fas fa-calendar-alt text-sm"></i> Events
+                    </button>
+                </nav>
+            </div>
+
+            <!-- TAB 1: ADMIN DASHBOARD VIEW -->
+            <main id="admin-view" class="bg-white rounded-2xl shadow-lg p-6 space-y-8">
+
+                <!-- Quick Search Bar (Admin View) -->
+                <div class="bg-gradient-to-r from-indigo-50 to-blue-50 p-5 rounded-2xl border border-indigo-100">
+                    <label for="admin-quick-search" class="block text-sm font-semibold text-indigo-900 mb-2">
+                        <i class="fas fa-magnifying-glass text-indigo-600 mr-1"></i> Quick Search Flats & Residents
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="admin-quick-search" oninput="handleQuickSearch(this.value)"
+                            placeholder="Type flat number (e.g. B1-402, 402) or resident name..."
+                            class="w-full pl-11 pr-10 py-3.5 bg-white rounded-xl border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-800 text-base shadow-sm">
+                        <div
+                            class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-indigo-400 text-lg">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button id="clear-search-btn" onclick="clearQuickSearch()"
+                            class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 hidden text-lg"
+                            title="Clear search">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Real-time Quick Search Results Container -->
+                <div id="quick-search-results-area" class="hidden space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <span>Search Results</span>
+                            <span id="search-result-count"
+                                class="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full font-semibold">0
+                                found</span>
+                        </h2>
+                        <button onclick="clearQuickSearch()"
+                            class="text-sm text-indigo-600 hover:underline font-medium">
+                            Back to building view
+                        </button>
+                    </div>
+                    <div id="quick-search-grid"
+                        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+                </div>
+
+                <!-- Standard Building Selector & Grid View -->
+                <div id="standard-building-area" class="space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                        <div class="flex-grow">
+                            <label for="building-select" class="block text-lg font-semibold text-gray-800 mb-2">Select a
+                                Building</label>
+                            <select id="building-select"
+                                class="w-full p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg bg-white shadow-sm"></select>
+                        </div>
+
+                        <!-- Unpaid Flats Quick Filter Toggle -->
+                        <div class="flex items-center">
+                            <button id="unpaid-filter-toggle" onclick="toggleUnpaidFilter()"
+                                class="w-full sm:w-auto px-4 py-3.5 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-white text-gray-700 border-gray-300 hover:bg-gray-50 shadow-sm">
+                                <span id="unpaid-toggle-dot"
+                                    class="w-3 h-3 rounded-full bg-gray-300 transition-colors"></span>
+                                <span>Show Only Unpaid Flats</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="flat-selection-area" class="hidden space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-gray-800" id="flat-grid-heading">Select a Flat</h2>
+                            <div class="flex items-center gap-3 text-xs text-gray-600">
+                                <span class="flex items-center gap-1"><span
+                                        class="w-2.5 h-2.5 rounded-full bg-green-500"></span> Paid</span>
+                                <span class="flex items-center gap-1"><span
+                                        class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Unpaid</span>
+                                <span class="flex items-center gap-1"><span
+                                        class="w-2.5 h-2.5 rounded-full bg-gray-400"></span> Empty</span>
+                            </div>
+                        </div>
+                        <div id="flat-grid-container" class="bg-gray-50 p-4 rounded-xl border border-gray-200"></div>
+                    </div>
+                </div>
+
+                <!-- Event Expenses & Bill Entry (Admin Only) -->
+                <div class="border-t pt-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <i class="fas fa-file-invoice-dollar text-indigo-600"></i> Event Expenses & Bill Entry
+                            </h2>
+                            <p class="text-sm text-gray-500 mt-0.5">Record festival expenses with receipt photo saved to
+                                Google Drive.</p>
+                        </div>
+                        <button type="button" onclick="openExpenseModal()"
+                            class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm">
+                            <i class="fas fa-plus-circle"></i> Add New Expense
+                        </button>
+                    </div>
+
+                    <!-- Recent Expenses List in Admin View -->
+                    <div class="bg-gray-50 rounded-2xl border border-gray-200 p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider">Recent
+                                Expenses</span>
+                            <span id="admin-expense-count"
+                                class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">0
+                                records</span>
+                        </div>
+                        <div id="admin-recent-expenses-list" class="space-y-2 max-h-56 overflow-y-auto">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Community Photos Upload (Admin Only) -->
+                <div class="border-t pt-8">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-camera text-green-600"></i> Community Photos
+                    </h2>
+                    <div class="bg-green-50/70 border border-green-100 p-6 rounded-2xl">
+                        <p class="text-sm text-gray-600 mb-4">Upload photos directly to the shared community Google
+                            Drive gallery folder.</p>
+                        <input type="file" id="file-input" accept="image/*"
+                            class="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200 cursor-pointer" />
+                        <button onclick="uploadFile()"
+                            class="mt-4 w-full sm:w-auto px-6 py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 shadow-md transition flex items-center justify-center gap-2">
+                            <i class="fas fa-cloud-arrow-up"></i> Upload Photo
+                        </button>
+                    </div>
+                </div>
+            </main>
+
+            <!-- TAB 2: RESIDENT / FINANCE VIEW -->
+            <main id="resident-view" class="hidden bg-white rounded-2xl shadow-lg p-6 space-y-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-wallet text-indigo-600"></i> Financial Summary
+                    </h2>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+                        <div class="bg-gray-100 p-4 rounded-xl border border-gray-200/60">
+                            <p class="text-xs md:text-sm font-medium text-gray-800">Carryover Balance</p>
+                            <p id="carryover-balance" class="text-2xl md:text-3xl font-bold text-gray-900 mt-1">₹0</p>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                            <p class="text-xs md:text-sm font-medium text-blue-800"><span
+                                    id="dynamic-year-label">2026</span> Collection</p>
+                            <p id="year-collection" class="text-2xl md:text-3xl font-bold text-blue-900 mt-1">₹0</p>
+                        </div>
+                        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                            <p class="text-xs md:text-sm font-medium text-indigo-800">Total Amount</p>
+                            <p id="total-amount" class="text-2xl md:text-3xl font-bold text-indigo-900 mt-1">₹0</p>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-100">
+                            <p class="text-xs md:text-sm font-medium text-yellow-800">Actual Expense</p>
+                            <p id="actual-expense" class="text-2xl md:text-3xl font-bold text-yellow-900 mt-1">₹0</p>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                            <p class="text-xs md:text-sm font-medium text-red-800">Committed Expense</p>
+                            <p id="committed-expense" class="text-2xl md:text-3xl font-bold text-red-900 mt-1">₹0</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                            <p class="text-xs md:text-sm font-medium text-green-800">Balance</p>
+                            <p id="final-balance" class="text-2xl md:text-3xl font-bold text-green-900 mt-1">₹0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Details & Breakdowns</h2>
+                        <div class="bg-gray-100 p-1 rounded-xl flex space-x-1 self-start sm:self-auto">
+                            <button id="festival-subtab-btn" onclick="switchFinanceTab('festival')"
+                                class="sub-tab-btn active px-4 py-2 rounded-lg text-sm">Festival Expenses</button>
+                            <button id="building-subtab-btn" onclick="switchFinanceTab('building')"
+                                class="sub-tab-btn px-4 py-2 rounded-lg text-sm">Building Collections</button>
+                        </div>
+                    </div>
+
+                    <!-- Festival Expenses Subview -->
+                    <div id="festival-expense-view">
+                        <div class="mb-4">
+                            <label for="festival-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by
+                                Festival</label>
+                            <select id="festival-filter" onchange="displayFilteredExpenses()"
+                                class="w-full md:w-1/3 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base bg-white"></select>
+                        </div>
+                        <div class="overflow-x-auto rounded-xl border border-gray-200">
+                            <table class="min-w-full bg-white divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr id="expense-header-row"></tr>
+                                </thead>
+                                <tbody id="expense-table-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Building Collections Subview -->
+                    <div id="building-collection-view" class="hidden">
+                        <div class="mb-4">
+                            <label for="building-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by
+                                Building</label>
+                            <select id="building-filter" onchange="displayFilteredCollections()"
+                                class="w-full md:w-1/3 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base bg-white"></select>
+                        </div>
+                        <div class="overflow-x-auto rounded-xl border border-gray-200">
+                            <table class="min-w-full bg-white divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Flat</th>
+                                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Name</th>
+                                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Mode</th>
+                                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Status</th>
+                                        <th class="py-3 px-4 text-right text-sm font-semibold text-gray-600">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="collection-table-body" class="divide-y divide-gray-200"></tbody>
+                                <tfoot id="collection-table-footer" class="bg-gray-50 font-semibold"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- TAB 3: GALLERY VIEW -->
+            <main id="gallery-view" class="hidden bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-images text-indigo-600"></i> Community Gallery
+                </h2>
+                <div id="photo-gallery" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+            </main>
+
+            <!-- TAB 4: EVENTS VIEW -->
+            <main id="events-view" class="hidden bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-calendar-star text-indigo-600"></i> Community Events
+                </h2>
+                <div class="mb-6">
+                    <label for="event-festival-filter" class="block text-sm font-medium text-gray-700 mb-1">Select
+                        Festival</label>
+                    <select id="event-festival-filter" onchange="updateEventsView()"
+                        class="w-full md:w-1/3 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base bg-white"></select>
+                </div>
+                <div id="events-container" class="space-y-6"></div>
+            </main>
+        </div>
+
+        <!-- Global Footer -->
+        <footer class="mt-12 py-6 text-center text-sm text-gray-500 border-t bg-white/70 backdrop-blur-sm">
+            <p>&copy; <span class="current-year">2026</span> Nyati Elan Cultural Forum. All rights reserved.</p>
+            <p class="mt-1 text-xs">
+                <a href="./privacy.html" target="_blank" class="hover:underline text-indigo-600">Privacy Policy</a>
+                <span class="mx-2">•</span>
+                <a href="./terms.html" target="_blank" class="hover:underline text-indigo-600">Terms of Service</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Resident Modal -->
+    <div id="resident-modal"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-40 items-center justify-center hidden modal-backdrop">
+        <div
+            class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-lg m-4 transform scale-95 overflow-hidden">
+            <div class="flex justify-between items-center p-5 border-b bg-gray-50/80">
+                <div class="flex items-center gap-2">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
+                        <i class="fas fa-door-open"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800" id="modal-title">Flat Details</h3>
+                </div>
+                <button onclick="closeResidentModal()"
+                    class="text-gray-400 hover:text-gray-600 text-2xl px-2 leading-none">&times;</button>
+            </div>
+            <div class="p-6 max-h-[80vh] overflow-y-auto space-y-4">
+                <!-- 2025 Historical Contribution Reference Callout -->
+                <div
+                    class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 p-3.5 rounded-xl flex items-center justify-between shadow-xs">
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-amber-950">2025 Contribution Reference</p>
+                            <p class="text-[11px] text-amber-700 font-medium">Previous year record for volunteer
+                                reference</p>
+                        </div>
+                    </div>
+                    <span id="modal-prev-2025"
+                        class="text-sm font-extrabold text-amber-900 bg-white px-3 py-1 rounded-lg border border-amber-200 shadow-2xs">-</span>
+                </div>
+
+                <form id="resident-form" onsubmit="event.preventDefault(); handleFormSubmit();" class="space-y-4">
+                    <div>
+                        <label for="resident-name" class="block mb-1.5 text-sm font-semibold text-gray-700">Resident
+                            Name</label>
+                        <input type="text" id="resident-name" placeholder="Full name of resident"
+                            class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                            required>
+                    </div>
+                    <div>
+                        <label for="resident-phone" class="block mb-1.5 text-sm font-semibold text-gray-700">Phone
+                            Number (WhatsApp)</label>
+                        <input type="tel" id="resident-phone" placeholder="e.g. 9876543210"
+                            class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="payment-status" class="block mb-1.5 text-sm font-semibold text-gray-700">Payment
+                                Status</label>
+                            <select id="payment-status"
+                                class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                                <option value="Paid">Paid</option>
+                                <option value="Unpaid">Unpaid</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="payment-mode" class="block mb-1.5 text-sm font-semibold text-gray-700">Payment
+                                Mode</label>
+                            <select id="payment-mode"
+                                class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                                <option value="UPI">UPI / GPay / PhonePe</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer / NEFT</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Previous Payment Status Banner (for additions / installments) -->
+                    <div id="prev-payment-banner"
+                        class="hidden bg-emerald-50 border border-emerald-200/90 p-3.5 rounded-xl flex items-center justify-between shadow-2xs">
+                        <div class="flex items-center gap-2.5">
+                            <div
+                                class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-emerald-950">Current Paid Total: <span
+                                        id="prev-paid-amount-display"
+                                        class="text-emerald-700 font-extrabold text-sm">₹0</span></p>
+                                <p class="text-[11px] text-emerald-700 font-medium" id="prev-paid-date-display">Recorded
+                                    previously</p>
+                            </div>
+                        </div>
+                        <label
+                            class="flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1.5 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-50/50 transition">
+                            <input type="checkbox" id="add-to-existing-toggle" checked onchange="updateAmountPreview()"
+                                class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer">
+                            <span class="text-xs font-bold text-emerald-900">Add to total</span>
+                        </label>
+                    </div>
+
+                    <!-- Quick Amount Preset Chips -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-xs font-semibold text-gray-700" id="amount-label-hint">Quick Amount
+                                Presets</label>
+                            <span class="text-[11px] text-gray-500">Tap to autofill</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5" id="quick-amount-chips">
+                            <button type="button" id="chip-prev-year" onclick="setPresetFromPrevYear()"
+                                class="hidden px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 rounded-lg hover:bg-amber-100 transition shadow-2xs">
+                                <i class="fas fa-history mr-1"></i> <span id="chip-prev-year-text">Same as 2025</span>
+                            </button>
+                            <button type="button" onclick="setPresetAmount(1000)"
+                                class="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition">₹1,000</button>
+                            <button type="button" onclick="setPresetAmount(2000)"
+                                class="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition">₹2,000</button>
+                            <button type="button" onclick="setPresetAmount(2500)"
+                                class="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition">₹2,500</button>
+                            <button type="button" onclick="setPresetAmount(3000)"
+                                class="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition">₹3,000</button>
+                            <button type="button" onclick="setPresetAmount(5000)"
+                                class="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition">₹5,000</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="payment-amount" id="payment-amount-label"
+                                class="block mb-1.5 text-sm font-semibold text-gray-700">Amount
+                                (₹)</label>
+                            <input type="number" id="payment-amount" placeholder="e.g. 2000"
+                                oninput="updateAmountPreview()"
+                                class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                            <div id="amount-calc-preview"
+                                class="hidden text-xs font-bold text-emerald-800 bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200 flex items-center gap-2 mt-2">
+                                <i class="fas fa-calculator text-emerald-600"></i>
+                                <span id="amount-calc-preview-text"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="payment-date" class="block mb-1.5 text-sm font-semibold text-gray-700">Payment
+                                Date</label>
+                            <input type="date" id="payment-date"
+                                class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                        </div>
+                    </div>
+
+                    <!-- Dynamic UPI QR Code Box -->
+                    <div class="border border-indigo-100 bg-indigo-50/50 rounded-xl p-3.5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold">
+                                    <i class="fas fa-qrcode"></i>
+                                </div>
+                                <span class="text-xs font-bold text-indigo-950">Instant UPI Payment QR</span>
+                            </div>
+                            <button type="button" onclick="toggleQrCodeView()"
+                                class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs hover:bg-indigo-50 transition">
+                                <i id="toggle-qr-btn-icon" class="fas fa-qrcode text-xs"></i>
+                                <span id="toggle-qr-btn-text">Show Dynamic QR</span>
+                            </button>
+                        </div>
+
+                        <div id="dynamic-qr-section"
+                            class="hidden flex flex-col items-center bg-white p-4 rounded-xl border border-indigo-100 shadow-xs text-center space-y-3">
+                            <p class="text-xs text-gray-600 font-medium">Ask resident to scan with any UPI App (GPay /
+                                PhonePe / PayTM)</p>
+                            <div
+                                class="p-2 bg-white border-2 border-dashed border-indigo-300 rounded-xl shadow-xs inline-block">
+                                <img id="dynamic-qr-img" src="" alt="Dynamic UPI QR Code"
+                                    class="w-48 h-48 object-contain mx-auto rounded-lg" />
+                            </div>
+                            <div class="w-full bg-gray-50 rounded-lg p-2.5 border border-gray-200 text-xs space-y-1.5">
+                                <div class="flex justify-between items-center text-gray-700 font-medium">
+                                    <span>Amount to Pay:</span>
+                                    <span id="qr-amount-label" class="font-extrabold text-indigo-700 text-sm">₹0</span>
+                                </div>
+                                <div
+                                    class="flex justify-between items-center text-gray-600 pt-1.5 border-t border-gray-200">
+                                    <span>Society UPI VPA:</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span id="qr-upi-label"
+                                            class="font-mono text-gray-900 font-semibold">9595132150@timecosmos</span>
+                                        <button type="button" onclick="copyUpiId()"
+                                            class="text-indigo-600 hover:text-indigo-800 p-0.5" title="Copy UPI ID">
+                                            <i class="fas fa-copy text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="comments" class="block mb-1.5 text-sm font-semibold text-gray-700">Comments /
+                            Transaction Ref</label>
+                        <textarea id="comments" rows="2" placeholder="Optional notes or transaction UTR number"
+                            class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"></textarea>
+                    </div>
+
+                    <!-- Payment Timestamp & Audit Trail Info -->
+                    <div id="modal-audit-info"
+                        class="hidden text-xs text-gray-600 bg-gray-50 p-3 rounded-xl border border-gray-200 flex items-center gap-2">
+                        <i class="fas fa-clock text-indigo-500 text-sm"></i>
+                        <span id="modal-audit-text"></span>
+                    </div>
+
+                    <input type="hidden" id="resident-building">
+                    <input type="hidden" id="resident-flat">
+                </form>
+            </div>
+            <div class="flex justify-end items-center p-4 border-t space-x-3 bg-gray-50 rounded-b-2xl">
+                <button type="button" onclick="closeResidentModal()"
+                    class="px-5 py-2.5 text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 font-medium transition">
+                    Cancel
+                </button>
+                <button type="button" onclick="document.getElementById('resident-form').requestSubmit()"
+                    class="px-6 py-2.5 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-semibold shadow-md transition flex items-center gap-2">
+                    <i class="fas fa-save"></i> Save Details
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification-toast"
+        class="fixed bottom-5 right-5 bg-green-600 text-white px-6 py-3.5 rounded-xl shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
+        <i id="notification-icon" class="fas fa-check-circle"></i>
+        <p id="notification-message" class="text-sm font-medium"></p>
+    </div>
+
+    <script>
+        // ===================================================================================
+        // --- CONFIGURATION ---
+        // ===================================================================================
+        const CONFIG = {
+            CLIENT_ID: '939061030612-0buu96811vujgankod2cmcjf2t8bc9ih.apps.googleusercontent.com',
+            // Google Apps Script Web App Deployment URL
+            API_URL: 'https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec',
+            // Default UPI Configuration for Dynamic QR Generator
+            UPI_ID: '9595132150@timecosmos',
+            UPI_PAYEE_NAME: 'Nyati Elan Cultural Forum',
+            // Google Drive Shared Folder ID for Event Photos
+            DRIVE_FOLDER_ID: '1-aeIzryYUscbOD9MV1jJOvgieZgh2Rl6',
+            // Scopes for Google Drive photo uploads
+            SCOPES: 'https://www.googleapis.com/auth/drive.file',
+            DISCOVERY_DOCS: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+        };
+
+        // --- GLOBAL STATE ---
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        let communityData = {};
+        let allResidents = [];
+        let allExpenses = [];
+        let allEvents = [];
+        let adminEmails = [];
+        let selectedBuilding = null;
+        let loggedInUser = null;
+        let expenseHeaders = [];
+        let isUnpaidFilterActive = false;
+        let currentSearchQuery = '';
+
+        const BUILDINGS = {
+            "B1": { floors: 12, flatsPerFloor: 4 },
+            "B2": { floors: 12, flatsPerFloor: 4 },
+            "B3": { floors: 12, flatsPerFloor: 4 },
+            "B4": { floors: 12, flatsPerFloor: 4 },
+            "A1": { floors: 12, flatsPerFloor: 4 },
+            "A2": { floors: 12, flatsPerFloor: 4 },
+            "G9": { floors: 12, flatsPerFloor: 6 },
+            "G10": { floors: 12, flatsPerFloor: 6 },
+        };
+
+        // --- INITIALIZATION & AUTHENTICATION ---
+        window.onload = () => {
+            console.log("Window loaded. Initializing dynamic year & auth scripts.");
+
+            // Set dynamic year across UI elements
+            const currentYear = new Date().getFullYear();
+            document.querySelectorAll('.current-year').forEach(el => el.innerText = currentYear);
+            const dynamicYearLabel = document.getElementById('dynamic-year-label');
+            if (dynamicYearLabel) dynamicYearLabel.innerText = currentYear;
+
+            if (!CONFIG.API_URL || CONFIG.API_URL === 'PASTE_YOUR_WEB_APP_URL_HERE') {
+                alert("CRITICAL ERROR: API_URL is not set in the HTML file. Please deploy the Google Apps Script and paste the URL into the CONFIG section.");
+                return;
+            }
+            const gapiScript = document.createElement('script');
+            gapiScript.src = 'https://apis.google.com/js/api.js';
+            gapiScript.async = true;
+            gapiScript.defer = true;
+            gapiScript.onload = gapiLoaded;
+            document.body.appendChild(gapiScript);
+
+            const gisScript = document.createElement('script');
+            gisScript.src = 'https://accounts.google.com/gsi/client';
+            gisScript.async = true;
+            gisScript.defer = true;
+            gisScript.onload = gisLoaded;
+            document.body.appendChild(gisScript);
+        };
+
+        function gapiLoaded() {
+            console.log("GAPI script loaded.");
+            gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            console.log("Initializing GAPI client.");
+            await gapi.client.init({ discoveryDocs: CONFIG.DISCOVERY_DOCS });
+            console.log("GAPI client initialized.");
+            gapiInited = true;
+            maybeEnableButtons();
+        }
+
+        function gisLoaded() {
+            console.log("GIS script loaded.");
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CONFIG.CLIENT_ID,
+                scope: CONFIG.SCOPES,
+                callback: '',
+            });
+            google.accounts.id.initialize({
+                client_id: CONFIG.CLIENT_ID,
+                callback: handleCredentialResponse,
+                auto_select: false
+            });
+            google.accounts.id.renderButton(document.getElementById('gsi-button'), {
+                theme: 'outline',
+                size: 'large',
+                text: 'signin_with'
+            });
+            console.log("GIS initialized.");
+            gisInited = true;
+            maybeEnableButtons();
+        }
+
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                document.getElementById('loader-overlay').style.display = 'none';
+            }
+        }
+
+        async function handleCredentialResponse(response) {
+            console.log("Credential response received - 1-step sign-in.");
+            try {
+                loggedInUser = jwt_decode(response.credential);
+                document.getElementById('user-greeting').innerText = `Logged in as: ${loggedInUser.name} (${loggedInUser.email})`;
+
+                // Instant transition to main app in 1 single sign-in step
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('loader-overlay').style.display = 'flex';
+
+                await loadAllDataFromBackend();
+
+                const adminTab = document.getElementById('admin-tab-btn');
+                const userEmail = (loggedInUser?.email || '').trim().toLowerCase();
+                const isAdmin = adminEmails.some(adm => adm.trim().toLowerCase() === userEmail);
+                console.log("Logged-in user email:", userEmail);
+                console.log("Authorized admin emails:", adminEmails);
+                console.log("Is Admin Match?:", isAdmin);
+
+                if (isAdmin) {
+                    adminTab.style.display = 'flex';
+                    switchTab('admin');
+                } else {
+                    adminTab.style.display = 'none';
+                    switchTab('resident');
+                }
+            } catch (err) {
+                console.error("Error during authentication transition:", err);
+                showNotification("Authentication failed: " + err.message, true);
+            } finally {
+                document.getElementById('loader-overlay').style.display = 'none';
+            }
+        }
+
+        function handleSignoutClick() {
+            if (window.google?.accounts?.id) {
+                google.accounts.id.disableAutoSelect();
+            }
+            const token = gapi?.client?.getToken?.();
+            if (token && token.access_token) {
+                google.accounts.oauth2.revoke(token.access_token, () => {
+                    gapi.client.setToken('');
+                });
+            }
+            loggedInUser = null;
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('login-screen').style.display = 'flex';
+            showNotification('Signed out successfully.');
+        }
+
+        // --- BACKEND API LOGIC ---
+        async function loadAllDataFromBackend() {
+            console.log("Attempting to load all data from backend URL:", CONFIG.API_URL);
+            try {
+                const response = await fetch(`${CONFIG.API_URL}?action=getAllData`);
+                const rawText = await response.text();
+
+                let result;
+                try {
+                    result = JSON.parse(rawText);
+                } catch (parseErr) {
+                    console.error("Non-JSON response received from Apps Script:", rawText.substring(0, 300));
+                    throw new Error("Backend returned an HTML/Authorization page instead of JSON. Ensure your Apps Script Web App is deployed with 'Execute as: Me' and 'Who has access: Anyone'.");
+                }
+
+                if (result.status !== 'success') {
+                    throw new Error(result.message || 'Error returned by Apps Script backend.');
+                }
+
+                const data = result.data;
+                console.log("Backend response received:", data);
+
+                // Process Residents dynamically according to sheet header names
+                const residentValues = data.residents || [];
+                let residentHeaders = [];
+                if (residentValues.length > 0) {
+                    residentHeaders = residentValues[0].map(h => String(h).trim().toLowerCase());
+                }
+
+                const colBuilding = residentHeaders.indexOf('building') !== -1 ? residentHeaders.indexOf('building') : 0;
+                const colFlat = residentHeaders.findIndex(h => h.includes('flat')) !== -1 ? residentHeaders.findIndex(h => h.includes('flat')) : 1;
+                const colName = residentHeaders.findIndex(h => h.includes('name') || h.includes('resident')) !== -1 ? residentHeaders.findIndex(h => h.includes('name') || h.includes('resident')) : 2;
+                const colPhone = residentHeaders.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact')) !== -1 ? residentHeaders.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact')) : 3;
+                const colStatus = residentHeaders.indexOf('status') !== -1 ? residentHeaders.indexOf('status') : 4;
+                const colAmount = residentHeaders.indexOf('amount') !== -1 ? residentHeaders.indexOf('amount') : 5;
+                const col2025 = residentHeaders.findIndex(h => h.includes('2025'));
+                const col2024 = residentHeaders.findIndex(h => h.includes('2024'));
+                const colDate = residentHeaders.indexOf('date') !== -1 ? residentHeaders.indexOf('date') : (col2025 !== -1 ? 10 : 6);
+                const colRecordedBy = residentHeaders.findIndex(h => h.includes('volunteer') || h.includes('recorded')) !== -1 ? residentHeaders.findIndex(h => h.includes('volunteer') || h.includes('recorded')) : (col2025 !== -1 ? 11 : 7);
+                const colComments = residentHeaders.findIndex(h => h.includes('comment') || h.includes('note')) !== -1 ? residentHeaders.findIndex(h => h.includes('comment') || h.includes('note')) : (col2025 !== -1 ? 12 : 8);
+                const colPaymentMode = residentHeaders.findIndex(h => h.includes('payment mode') || h.includes('mode') || h.includes('method'));
+
+                allResidents = residentValues.slice(1).map((row, index) => ({
+                    building: (row[colBuilding] || '').toString().trim(),
+                    flat: (row[colFlat] || '').toString().trim(),
+                    name: (row[colName] || '').toString().trim(),
+                    phone: (row[colPhone] || '').toString().trim(),
+                    status: (row[colStatus] || 'Unpaid').toString().trim(),
+                    amount: parseFloat(String(row[colAmount] || '').replace(/[^0-9.-]+/g, "")) || 0,
+                    amount2025: col2025 !== -1 ? (row[col2025] || '').toString().trim() : '',
+                    amount2024: col2024 !== -1 ? (row[col2024] || '').toString().trim() : '',
+                    date: colDate !== -1 ? (row[colDate] || '').toString().trim() : '',
+                    recordedBy: colRecordedBy !== -1 ? (row[colRecordedBy] || '').toString().trim() : '',
+                    comments: colComments !== -1 ? (row[colComments] || '').toString().trim() : '',
+                    paymentMode: colPaymentMode !== -1 ? (row[colPaymentMode] || 'UPI').toString().trim() : 'UPI',
+                    rowIndex: index + 2
+                }));
+                console.log(`Loaded ${allResidents.length} residents with dynamic headers:`, residentHeaders);
+
+                // Process Expenses
+                const expenseValues = data.expenses || [];
+                expenseHeaders = expenseValues.length > 0 ? expenseValues[0] : [];
+                allExpenses = expenseValues.slice(1).map(row => {
+                    let expenseObj = {};
+                    expenseHeaders.forEach((header, i) => { expenseObj[header] = row[i]; });
+                    expenseObj['Total'] = parseFloat(String(expenseObj['Total']).replace(/[^0-9.-]+/g, "")) || 0;
+                    return expenseObj;
+                });
+                console.log(`Loaded ${allExpenses.length} expenses.`);
+
+                // Process Events
+                const eventValues = data.events || [];
+                allEvents = eventValues.slice(1).map(row => ({
+                    date: row[0],
+                    celebration: row[1],
+                    day: row[2],
+                    name: row[3],
+                    description: row[4],
+                    time: row[5],
+                    location: row[6]
+                }));
+                console.log(`Loaded ${allEvents.length} events.`);
+
+                // Process Summary with Intelligent Multi-Format Parser
+                const rawSummary = data.summary || [];
+                const summaryData = parseSummaryData(rawSummary, allResidents, allExpenses);
+                console.log("Parsed summary data:", summaryData);
+
+                // Process Admins
+                adminEmails = (data.admins || []).map(email => email.trim().toLowerCase());
+                console.log(`Loaded ${adminEmails.length} admin emails:`, adminEmails);
+
+                populateCommunityData();
+                setupBuildingSelector();
+                updateResidentView(summaryData);
+                setupFilters();
+                updateEventsView();
+
+                // Refresh search results or building grid if active
+                if (currentSearchQuery) {
+                    handleQuickSearch(currentSearchQuery);
+                } else if (selectedBuilding) {
+                    generateFlatGrid(selectedBuilding);
+                }
+
+            } catch (err) {
+                console.error('Error loading data from backend:', err);
+                const message = err.message || 'Failed to load data from backend.';
+                showNotification(message, true);
+            }
+        }
+
+        async function updateSheetViaBackend(residentData) {
+            try {
+                const response = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' }, // Required for Apps Script doPost
+                    body: JSON.stringify({
+                        action: 'updateSheet',
+                        payload: residentData
+                    }),
+                });
+                const result = await response.json();
+                if (result.status !== 'success') throw new Error(result.message);
+
+                showNotification(result.data || 'Details saved successfully!');
+                await loadAllDataFromBackend(); // Refresh all data
+
+            } catch (err) {
+                console.error('Error saving to sheet via backend:', err);
+                showNotification('Failed to save data. Check console.', true);
+            }
+        }
+
+        // --- GOOGLE DRIVE LOGIC (Client-side) ---
+        async function ensureDriveAccessToken() {
+            const existingToken = gapi?.client?.getToken?.();
+            if (existingToken && existingToken.access_token) {
+                return existingToken.access_token;
+            }
+            return new Promise((resolve, reject) => {
+                if (!tokenClient) {
+                    reject(new Error("Drive OAuth client not initialized."));
+                    return;
+                }
+                tokenClient.callback = (resp) => {
+                    if (resp.error !== undefined) {
+                        reject(new Error(resp.error_description || resp.error));
+                        return;
+                    }
+                    if (gapi?.client) {
+                        gapi.client.setToken(resp);
+                    }
+                    resolve(resp.access_token);
+                };
+                tokenClient.requestAccessToken({ prompt: '' });
+            });
+        }
+
+        async function listDriveFiles() {
+            try {
+                if (!gapi?.client?.drive) return [];
+                const token = gapi?.client?.getToken?.();
+                if (!token || !token.access_token) return [];
+
+                const response = await gapi.client.drive.files.list({
+                    'pageSize': 50,
+                    'q': `'${CONFIG.DRIVE_FOLDER_ID}' in parents and mimeType contains 'image/'`,
+                    'fields': "nextPageToken, files(id, name, thumbnailLink, webViewLink)"
+                });
+                return response.result.files;
+            } catch (err) {
+                console.warn("Drive files list skipped:", err);
+                return [];
+            }
+        }
+
+        async function uploadFile() {
+            const file = document.getElementById('file-input').files[0];
+            if (!file) {
+                showNotification('Please select a file to upload.', true);
+                return;
+            }
+            document.getElementById('loader-overlay').style.display = 'flex';
+            try {
+                const accessToken = await ensureDriveAccessToken();
+                const metadata = { 'name': file.name, 'parents': [CONFIG.DRIVE_FOLDER_ID] };
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', file);
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: form
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showNotification(`File "${result.name}" uploaded successfully!`);
+                    document.getElementById('file-input').value = '';
+                    if (!document.getElementById('gallery-view').classList.contains('hidden')) {
+                        updateGalleryView();
+                    }
+                } else {
+                    throw new Error(result.error?.message || 'Upload failed');
+                }
+            } catch (err) {
+                console.error('Error uploading file:', err);
+                showNotification(`Failed to upload file: ${err.message}`, true);
+            } finally {
+                document.getElementById('loader-overlay').style.display = 'none';
+            }
+        }
+
+        // --- UI & WORKFLOW LOGIC ---
+        function populateCommunityData() {
+            communityData = {};
+            Object.keys(BUILDINGS).forEach(b => communityData[b] = { residents: {} });
+            allResidents.forEach(res => {
+                if (communityData[res.building]) {
+                    communityData[res.building].residents[res.flat] = res;
+                }
+            });
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('main').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`${tabName}-view`).classList.remove('hidden');
+            document.getElementById(`${tabName}-tab-btn`).classList.add('active');
+
+            if (tabName === 'gallery') updateGalleryView();
+            if (tabName === 'resident') {
+                loadAllDataFromBackend();
+                switchFinanceTab('festival');
+            }
+            if (tabName === 'events') updateEventsView();
+        }
+
+        function switchFinanceTab(subTabName) {
+            document.querySelectorAll('.sub-tab-btn').forEach(el => el.classList.remove('active'));
+            if (subTabName === 'festival') {
+                document.getElementById('festival-expense-view').classList.remove('hidden');
+                document.getElementById('building-collection-view').classList.add('hidden');
+                document.getElementById('festival-subtab-btn').classList.add('active');
+            } else {
+                document.getElementById('festival-expense-view').classList.add('hidden');
+                document.getElementById('building-collection-view').classList.remove('hidden');
+                document.getElementById('building-subtab-btn').classList.add('active');
+            }
+        }
+
+        function parseSummaryData(rawSummary, residents = [], expenses = []) {
+            let carryoverNum = 0;
+            let collectionNum = 0;
+            let actualExpenseNum = 0;
+            let committedExpenseNum = 0;
+            let balanceNum = 0;
+
+            let hasExplicitCarryover = false;
+            let hasExplicitCollection = false;
+            let hasExplicitExpense = false;
+            let hasExplicitBalance = false;
+
+            const parseVal = (val) => {
+                if (val === undefined || val === null) return null;
+                const str = String(val).replace(/,/g, '').trim();
+                if (!str) return null;
+                // Match formats like "11k", "11K", "₹11K"
+                const kMatch = str.match(/^₹?\s*([0-9.]+)\s*k$/i);
+                if (kMatch) {
+                    return (parseFloat(kMatch[1]) || 0) * 1000;
+                }
+                const cleaned = str.replace(/[^0-9.-]+/g, "");
+                if (!cleaned) return null;
+                return parseFloat(cleaned);
+            };
+
+            const findValueInRow = (row, startCol) => {
+                for (let c = startCol + 1; c < row.length; c++) {
+                    const cell = row[c];
+                    if (cell && (String(cell).includes('₹') || parseVal(cell) !== null)) {
+                        const v = parseVal(cell);
+                        if (v !== null && !isNaN(v)) return v;
+                    }
+                }
+                return null;
+            };
+
+            let rows = [];
+            if (Array.isArray(rawSummary)) {
+                if (rawSummary.length > 0 && Array.isArray(rawSummary[0])) {
+                    rows = rawSummary;
+                } else if (rawSummary.length > 0) {
+                    rows = [rawSummary];
+                }
+            }
+
+            for (let r = 0; r < rows.length; r++) {
+                const row = rows[r];
+                for (let c = 0; c < row.length; c++) {
+                    const text = String(row[c] || '').trim().toLowerCase();
+                    if (!text) continue;
+
+                    // 1. Carryover Balance
+                    if (text.includes('carryover') || text.includes('carry over') || text.includes('opening balance') || text.includes('previous balance') || text.includes('2025 balance')) {
+                        const val = findValueInRow(row, c);
+                        if (val !== null) {
+                            carryoverNum = val;
+                            hasExplicitCarryover = true;
+                        }
+                    }
+
+                    // 2. Collection
+                    if (text.includes('2026 year collection') || text.includes('year collection') || text === 'collection' || text.includes('total collection')) {
+                        const val = findValueInRow(row, c);
+                        if (val !== null) {
+                            collectionNum = val;
+                            hasExplicitCollection = true;
+                        }
+                    }
+
+                    // 3. Actual Expense
+                    if (text.includes('actual expence') || text.includes('actual expense') || text.includes('actual spent')) {
+                        const val = findValueInRow(row, c);
+                        if (val !== null) {
+                            actualExpenseNum = val;
+                            hasExplicitExpense = true;
+                        }
+                    }
+
+                    // 4. Committed Expense
+                    if (text.includes('commited expence') || text.includes('committed expense') || text.includes('planned')) {
+                        const val = findValueInRow(row, c);
+                        if (val !== null) {
+                            committedExpenseNum = val;
+                        }
+                    }
+
+                    // 5. Balance
+                    if (text === 'balance' || text.includes('balance in bank') || text.includes('net balance') || text.includes('final balance')) {
+                        const val = findValueInRow(row, c);
+                        if (val !== null && !hasExplicitBalance) {
+                            balanceNum = val;
+                            hasExplicitBalance = true;
+                        }
+                    }
+                }
+            }
+
+            // Always calculate actual live collection directly from paid residents if 0 or missing in summary
+            const liveCollection = (residents || []).reduce((acc, r) => {
+                return acc + (r.status === 'Paid' ? (parseFloat(r.amount) || 0) : 0);
+            }, 0);
+
+            if (!hasExplicitCollection || liveCollection > collectionNum) {
+                collectionNum = liveCollection;
+            }
+
+            // Always calculate actual expenses from expenses list if 0 or missing in summary
+            const liveExpenses = (expenses || []).reduce((acc, exp) => {
+                return acc + (parseFloat(exp.Total) || 0);
+            }, 0);
+
+            if (!hasExplicitExpense || liveExpenses > actualExpenseNum) {
+                actualExpenseNum = liveExpenses;
+            }
+
+            const totalFunds = carryoverNum + collectionNum;
+            const finalBalance = (totalFunds - actualExpenseNum - committedExpenseNum);
+
+            const fmt = (num) => `₹${Math.round(num).toLocaleString('en-IN')}`;
+
+            return {
+                carryover: fmt(carryoverNum),
+                collection: fmt(collectionNum),
+                total: fmt(totalFunds),
+                actualExpense: fmt(actualExpenseNum),
+                committedExpense: fmt(committedExpenseNum),
+                balance: fmt(finalBalance)
+            };
+        }
+
+        function updateResidentView(summaryData = {}) {
+            document.getElementById('carryover-balance').innerText = summaryData.carryover || '₹0';
+            document.getElementById('year-collection').innerText = summaryData.collection || '₹0';
+            document.getElementById('total-amount').innerText = summaryData.total || '₹0';
+            document.getElementById('actual-expense').innerText = summaryData.actualExpense || '₹0';
+            document.getElementById('committed-expense').innerText = summaryData.committedExpense || '₹0';
+            document.getElementById('final-balance').innerText = summaryData.balance || '₹0';
+        }
+
+        function setupFilters() {
+            const festivalFilter = document.getElementById('festival-filter');
+            const celebrationHeader = expenseHeaders.find(h => h.toLowerCase().trim() === 'celebration');
+            const uniqueFestivals = celebrationHeader ? [...new Set(allExpenses.map(exp => exp[celebrationHeader]).filter(Boolean))] : [];
+            festivalFilter.innerHTML = '<option value="All">All Festivals</option>';
+            uniqueFestivals.forEach(festival => {
+                festivalFilter.innerHTML += `<option value="${festival}">${festival}</option>`;
+            });
+
+            const buildingFilter = document.getElementById('building-filter');
+            buildingFilter.innerHTML = '<option value="All">All Buildings</option>';
+            Object.keys(BUILDINGS).forEach(name => {
+                buildingFilter.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+
+            const eventFestivalFilter = document.getElementById('event-festival-filter');
+            const uniqueEventFestivals = [...new Set(allEvents.map(event => event.celebration).filter(Boolean))];
+            eventFestivalFilter.innerHTML = '<option value="All">All Festivals</option>';
+            uniqueEventFestivals.forEach(festival => {
+                eventFestivalFilter.innerHTML += `<option value="${festival}">${festival}</option>`;
+            });
+
+            displayFilteredExpenses();
+            displayFilteredCollections();
+            updateEventsView();
+        }
+
+        function displayFilteredExpenses() {
+            const selectedFestival = document.getElementById('festival-filter').value;
+            const celebrationHeader = expenseHeaders.find(h => h.toLowerCase().trim() === 'celebration');
+            const filteredExpenses = selectedFestival === 'All' ? allExpenses : allExpenses.filter(exp => exp[celebrationHeader] === selectedFestival);
+            const headersToDisplay = expenseHeaders.filter(header => header.toLowerCase().trim() !== 'volunteer name');
+            const expenseHeaderRow = document.getElementById('expense-header-row');
+            const expenseTableBody = document.getElementById('expense-table-body');
+            expenseHeaderRow.innerHTML = '';
+            expenseTableBody.innerHTML = '';
+
+            if (headersToDisplay.length > 0) {
+                headersToDisplay.forEach(header => {
+                    expenseHeaderRow.innerHTML += `<th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">${header}</th>`;
+                });
+            }
+            if (filteredExpenses.length === 0) {
+                expenseTableBody.innerHTML = `<tr><td colspan="${headersToDisplay.length || 1}" class="text-center py-6 text-gray-500">No expenses recorded for this selection.</td></tr>`;
+            } else {
+                filteredExpenses.forEach(exp => {
+                    let rowHtml = '<tr class="hover:bg-gray-50">';
+                    headersToDisplay.forEach(header => {
+                        const isNumeric = header === 'Total' || header === 'Given' || header === 'Pending';
+                        rowHtml += `<td class="py-3 px-4 text-sm ${isNumeric ? 'text-right font-medium' : 'text-left'}">${exp[header] || ''}</td>`;
+                    });
+                    rowHtml += '</tr>';
+                    expenseTableBody.innerHTML += rowHtml;
+                });
+            }
+        }
+
+        function displayFilteredCollections() {
+            const selectedBuilding = document.getElementById('building-filter').value;
+            const filteredResidents = selectedBuilding === 'All' ? allResidents : allResidents.filter(res => res.building === selectedBuilding);
+            const collectionTableBody = document.getElementById('collection-table-body');
+            const collectionTableFooter = document.getElementById('collection-table-footer');
+            collectionTableBody.innerHTML = '';
+            collectionTableFooter.innerHTML = '';
+
+            if (filteredResidents.length === 0) {
+                collectionTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-500">No collection data for this selection.</td></tr>`;
+            } else {
+                let totalCollected = 0;
+                let paidCount = 0;
+                let unpaidCount = 0;
+                filteredResidents.forEach(res => {
+                    const amount = res.amount > 0 ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(res.amount) : '-';
+                    collectionTableBody.innerHTML += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-3 px-4 text-sm font-semibold text-gray-900">${res.building}-${res.flat}</td>
+                            <td class="py-3 px-4 text-sm text-gray-700">${res.name || '<span class="text-gray-400">Unassigned</span>'}</td>
+                            <td class="py-3 px-4 text-sm text-gray-600">${res.status === 'Paid' ? (res.paymentMode || 'UPI') : '-'}</td>
+                            <td class="py-3 px-4 text-sm"><span class="px-2.5 py-1 text-xs font-semibold rounded-full ${res.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${res.status}</span></td>
+                            <td class="py-3 px-4 text-sm font-semibold text-right">${amount}</td>
+                        </tr>
+                    `;
+                    if (res.status === 'Paid') {
+                        totalCollected += res.amount;
+                        paidCount++;
+                    } else {
+                        unpaidCount++;
+                    }
+                });
+                collectionTableFooter.innerHTML = `
+                    <tr>
+                        <td class="py-3 px-4 text-left" colspan="3">
+                            <span class="mr-4 text-sm">Paid: <span class="text-green-600 font-bold">${paidCount}</span></span>
+                            <span class="text-sm">Unpaid: <span class="text-yellow-600 font-bold">${unpaidCount}</span></span>
+                        </td>
+                        <td class="py-3 px-4 text-right text-sm">Total Collected:</td>
+                        <td class="py-3 px-4 text-right text-sm text-indigo-700 font-bold">${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(totalCollected)}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        function updateEventsView() {
+            const eventsContainer = document.getElementById('events-container');
+            const selectedFestival = document.getElementById('event-festival-filter')?.value || 'All';
+            eventsContainer.innerHTML = '';
+            const filteredEvents = selectedFestival === 'All' ? allEvents : allEvents.filter(event => event.celebration === selectedFestival);
+            if (filteredEvents.length === 0) {
+                eventsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No events scheduled for this selection.</p>';
+                return;
+            }
+            const groupedEvents = filteredEvents.reduce((acc, event) => {
+                const key = `${event.date}_${event.celebration}`;
+                if (!acc[key]) {
+                    acc[key] = { date: event.date, day: event.day, celebration: event.celebration, description: event.description, events: [] };
+                }
+                acc[key].events.push(event);
+                return acc;
+            }, {});
+
+            for (const key in groupedEvents) {
+                const group = groupedEvents[key];
+                const eventsListHtml = group.events.map(event => `
+                    <li class="flex items-center justify-between py-2.5">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-clock text-indigo-500"></i>
+                            <span class="font-semibold text-gray-800 text-sm md:text-base">${event.name}</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-700 font-medium">${event.time}</p>
+                            <p class="text-xs text-gray-500">${event.location}</p>
+                        </div>
+                    </li>
+                `).join('');
+
+                const eventCard = `
+                    <div class="event-card bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                        <div class="p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <p class="text-xs md:text-sm font-semibold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">${group.celebration || 'Event'}</p>
+                                <p class="text-xs md:text-sm text-gray-600 font-medium">${group.date || ''} ${group.day ? `(${group.day})` : ''}</p>
+                            </div>
+                            <p class="text-gray-600 text-sm mb-2">${group.description}</p>
+                        </div>
+                        <div class="bg-gray-50 px-5 py-3 border-t">
+                            <ul class="divide-y divide-gray-200">
+                                ${eventsListHtml}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                eventsContainer.innerHTML += eventCard;
+            }
+        }
+
+        async function updateGalleryView() {
+            document.getElementById('loader-overlay').style.display = 'flex';
+            const files = await listDriveFiles();
+            const galleryContainer = document.getElementById('photo-gallery');
+            galleryContainer.innerHTML = '';
+            if (files && files.length > 0) {
+                files.forEach(file => {
+                    const photoElement = `<div class="photo-item bg-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition"><a href="${file.webViewLink}" target="_blank"><img src="${file.thumbnailLink}" alt="${file.name}" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" loading="lazy"></a></div>`;
+                    galleryContainer.innerHTML += photoElement;
+                });
+            } else {
+                galleryContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No photos found in the community folder.</p>';
+            }
+            document.getElementById('loader-overlay').style.display = 'none';
+        }
+
+        // --- BUILDING SELECTOR & GRID VIEW ---
+        function setupBuildingSelector() {
+            console.log("Setting up building selector.");
+            const buildingSelect = document.getElementById('building-select');
+            buildingSelect.innerHTML = '<option value="">-- Choose a Building --</option>';
+            Object.keys(BUILDINGS).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = `Building ${name}`;
+                buildingSelect.appendChild(option);
+            });
+            buildingSelect.addEventListener('change', handleBuildingSelect);
+        }
+
+        function handleBuildingSelect(event) {
+            selectedBuilding = event.target.value;
+            const flatSelectionArea = document.getElementById('flat-selection-area');
+            if (selectedBuilding) {
+                generateFlatGrid(selectedBuilding);
+                flatSelectionArea.classList.remove('hidden');
+            } else {
+                flatSelectionArea.classList.add('hidden');
+            }
+        }
+
+        function toggleUnpaidFilter() {
+            isUnpaidFilterActive = !isUnpaidFilterActive;
+            const toggleBtn = document.getElementById('unpaid-filter-toggle');
+            const toggleDot = document.getElementById('unpaid-toggle-dot');
+
+            if (isUnpaidFilterActive) {
+                toggleBtn.classList.remove('bg-white', 'text-gray-700', 'border-gray-300');
+                toggleBtn.classList.add('bg-amber-50', 'text-amber-900', 'border-amber-400', 'ring-2', 'ring-amber-200');
+                toggleDot.classList.remove('bg-gray-300');
+                toggleDot.classList.add('bg-amber-500');
+            } else {
+                toggleBtn.classList.remove('bg-amber-50', 'text-amber-900', 'border-amber-400', 'ring-2', 'ring-amber-200');
+                toggleBtn.classList.add('bg-white', 'text-gray-700', 'border-gray-300');
+                toggleDot.classList.remove('bg-amber-500');
+                toggleDot.classList.add('bg-gray-300');
+            }
+
+            // If quick search is active, re-filter search results
+            if (currentSearchQuery) {
+                handleQuickSearch(currentSearchQuery);
+            } else if (selectedBuilding) {
+                generateFlatGrid(selectedBuilding);
+            }
+        }
+
+        function generateFlatGrid(buildingName) {
+            const container = document.getElementById('flat-grid-container');
+            const heading = document.getElementById('flat-grid-heading');
+            const buildingLayout = BUILDINGS[buildingName];
+            if (!buildingLayout) {
+                container.innerHTML = '<p class="text-gray-500">Building layout not defined.</p>';
+                return;
+            }
+
+            heading.innerText = `Select a Flat in ${buildingName} ${isUnpaidFilterActive ? '(Filtered: Unpaid Only)' : ''}`;
+            container.innerHTML = '';
+
+            const grid = document.createElement('div');
+            grid.className = 'flat-grid';
+            grid.style.gridTemplateColumns = `repeat(${buildingLayout.flatsPerFloor}, minmax(0, 1fr))`;
+
+            let visibleCount = 0;
+
+            for (let floor = 1; floor <= buildingLayout.floors; floor++) {
+                for (let flatNum = 1; flatNum <= buildingLayout.flatsPerFloor; flatNum++) {
+                    const flatNumber = `${floor}${flatNum.toString().padStart(2, '0')}`;
+                    const resident = communityData[buildingName]?.residents[flatNumber];
+
+                    let statusClass = 'empty';
+                    if (resident && resident.status) {
+                        statusClass = resident.status.toLowerCase();
+                    }
+
+                    // Check unpaid filter
+                    if (isUnpaidFilterActive && statusClass === 'paid') {
+                        continue; // skip paid flats when unpaid filter is active
+                    }
+
+                    visibleCount++;
+                    const btn = document.createElement('button');
+                    btn.className = `flat-btn ${statusClass} p-3.5 rounded-xl text-left shadow-sm`;
+
+                    const residentNameText = resident?.name ? `<span class="block text-xs font-normal opacity-85 truncate mt-0.5">${resident.name}</span>` : '';
+                    const prev2025Tag = (resident?.amount2025 && resident.amount2025 !== '?' && resident.amount2025 !== '0' && resident.amount2025 !== '₹0')
+                        ? `<span class="inline-block mt-1 text-[10px] font-medium bg-black/5 px-1.5 py-0.5 rounded text-gray-700">2025: ${resident.amount2025}</span>`
+                        : '';
+
+                    btn.innerHTML = `
+                        <span class="font-bold text-base md:text-lg block">${buildingName}-${flatNumber}</span>
+                        ${residentNameText}
+                        ${prev2025Tag}
+                        <div class="status-dot"></div>
+                    `;
+                    btn.onclick = () => openResidentModal(buildingName, flatNumber);
+                    grid.appendChild(btn);
+                }
+            }
+
+            if (visibleCount === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-circle-check text-green-500 text-3xl mb-2"></i>
+                        <p class="text-gray-700 font-semibold">Great news! All flats in Building ${buildingName} are paid.</p>
+                        <p class="text-gray-500 text-xs mt-1">Toggle "Show Only Unpaid Flats" off to view all flats.</p>
+                    </div>
+                `;
+            } else {
+                container.appendChild(grid);
+            }
+        }
+
+        // --- REAL-TIME QUICK SEARCH LOGIC ---
+        function handleQuickSearch(query) {
+            currentSearchQuery = (query || '').trim();
+            const clearBtn = document.getElementById('clear-search-btn');
+            const searchResultsArea = document.getElementById('quick-search-results-area');
+            const standardBuildingArea = document.getElementById('standard-building-area');
+            const searchGrid = document.getElementById('quick-search-grid');
+            const searchCount = document.getElementById('search-result-count');
+
+            if (!currentSearchQuery) {
+                clearBtn.classList.add('hidden');
+                searchResultsArea.classList.add('hidden');
+                standardBuildingArea.classList.remove('hidden');
+                return;
+            }
+
+            clearBtn.classList.remove('hidden');
+            searchResultsArea.classList.remove('hidden');
+            standardBuildingArea.classList.add('hidden');
+
+            const normalizedQuery = currentSearchQuery.toLowerCase().replace(/[\s-]/g, '');
+            const matchingFlats = [];
+
+            // Search through all possible building flats
+            Object.keys(BUILDINGS).forEach(bName => {
+                const bLayout = BUILDINGS[bName];
+                for (let floor = 1; floor <= bLayout.floors; floor++) {
+                    for (let flatNum = 1; flatNum <= bLayout.flatsPerFloor; flatNum++) {
+                        const flatNumber = `${floor}${flatNum.toString().padStart(2, '0')}`;
+                        const fullFlatTag = `${bName}-${flatNumber}`.toLowerCase();
+                        const fullFlatTagNoHyphen = `${bName}${flatNumber}`.toLowerCase();
+                        const resident = communityData[bName]?.residents[flatNumber];
+
+                        const resName = (resident?.name || '').toLowerCase();
+                        const resPhone = (resident?.phone || '').replace(/[^0-9]/g, '');
+                        const resStatus = resident?.status || 'Empty';
+
+                        // Check match condition
+                        const matchesFlat = fullFlatTag.includes(normalizedQuery) || fullFlatTagNoHyphen.includes(normalizedQuery) || flatNumber.includes(normalizedQuery);
+                        const matchesName = resName.includes(currentSearchQuery.toLowerCase());
+                        const matchesPhone = resPhone.includes(currentSearchQuery.replace(/[^0-9]/g, ''));
+
+                        if (matchesFlat || matchesName || matchesPhone) {
+                            if (isUnpaidFilterActive && resStatus.toLowerCase() === 'paid') {
+                                return; // skip paid flats if filter on
+                            }
+
+                            matchingFlats.push({
+                                building: bName,
+                                flat: flatNumber,
+                                resident: resident,
+                                status: resStatus
+                            });
+                        }
+                    }
+                }
+            });
+
+            searchCount.innerText = `${matchingFlats.length} found`;
+            searchGrid.innerHTML = '';
+
+            if (matchingFlats.length === 0) {
+                searchGrid.innerHTML = `
+                    <div class="col-span-full text-center py-10 bg-gray-50 rounded-2xl border border-gray-200">
+                        <i class="fas fa-search text-gray-400 text-3xl mb-2"></i>
+                        <p class="text-gray-700 font-semibold">No matching flats or residents found</p>
+                        <p class="text-gray-500 text-xs mt-1">Try searching by flat number (e.g. B1-402, 402) or resident name.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            matchingFlats.forEach(item => {
+                const res = item.resident;
+                const statusClass = item.status.toLowerCase();
+                let statusBadge = '';
+
+                if (statusClass === 'paid') {
+                    statusBadge = '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">Paid</span>';
+                } else if (statusClass === 'unpaid') {
+                    statusBadge = '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">Unpaid</span>';
+                } else {
+                    statusBadge = '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">Empty</span>';
+                }
+
+                const amountText = res?.amount ? `₹${res.amount.toLocaleString('en-IN')}` : '-';
+                const paymentModeTag = (res?.status === 'Paid' && res?.paymentMode) ? `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">${res.paymentMode}</span>` : '';
+                const prev2025Badge = (res?.amount2025 && res.amount2025 !== '?' && res.amount2025 !== '0' && res.amount2025 !== '₹0')
+                    ? `<span class="text-[11px] font-medium text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">2025: ${res.amount2025}</span>`
+                    : '';
+
+                const card = document.createElement('div');
+                card.className = 'bg-white border border-gray-200 hover:border-indigo-400 hover:shadow-md rounded-xl p-4 cursor-pointer transition-all flex flex-col justify-between';
+                card.onclick = () => openResidentModal(item.building, item.flat);
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-lg text-gray-900">${item.building}-${item.flat}</span>
+                            ${statusBadge}
+                        </div>
+                        <p class="text-sm font-medium text-gray-800 truncate">${res?.name || '<span class="text-gray-400 font-normal">Unassigned</span>'}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">${res?.phone || 'No phone'}</p>
+                        ${prev2025Badge ? `<div class="mt-2">${prev2025Badge}</div>` : ''}
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs">
+                        <span class="font-semibold text-gray-700">${amountText}</span>
+                        ${paymentModeTag}
+                    </div>
+                `;
+                searchGrid.appendChild(card);
+            });
+        }
+
+        function clearQuickSearch() {
+            document.getElementById('admin-quick-search').value = '';
+            handleQuickSearch('');
+        }
+
+        function safeFormatDateForInput(dateStr) {
+            if (!dateStr) return new Date().toISOString().split('T')[0];
+            try {
+                const clean = String(dateStr).trim();
+                // Already in YYYY-MM-DD format
+                if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+                    return clean;
+                }
+                // DD/MM/YYYY or DD-MM-YYYY format
+                const dmyMatch = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+                if (dmyMatch) {
+                    const day = dmyMatch[1].padStart(2, '0');
+                    const month = dmyMatch[2].padStart(2, '0');
+                    const year = dmyMatch[3];
+                    return `${year}-${month}-${day}`;
+                }
+                const parsed = new Date(clean);
+                if (!isNaN(parsed.getTime())) {
+                    return parsed.toISOString().split('T')[0];
+                }
+            } catch (e) {
+                console.warn("Could not parse date:", dateStr);
+            }
+            return new Date().toISOString().split('T')[0];
+        }
+
+        let currentExistingAmount = 0;
+        let currentExistingComments = '';
+        let currentExistingDate = '';
+
+        function setPresetAmount(amt) {
+            document.getElementById('payment-amount').value = amt;
+            updateAmountPreview();
+        }
+
+        function setPresetFromPrevYear() {
+            const chip = document.getElementById('chip-prev-year');
+            const amt = chip.getAttribute('data-amount');
+            if (amt) {
+                document.getElementById('payment-amount').value = amt;
+                updateAmountPreview();
+            }
+        }
+
+        function updateAmountPreview() {
+            const amountInput = document.getElementById('payment-amount');
+            const enteredAmt = parseFloat(amountInput.value) || 0;
+            const isAddChecked = document.getElementById('add-to-existing-toggle')?.checked;
+            const calcPreview = document.getElementById('amount-calc-preview');
+            const calcText = document.getElementById('amount-calc-preview-text');
+
+            if (currentExistingAmount > 0 && isAddChecked && enteredAmt > 0) {
+                const newTotal = currentExistingAmount + enteredAmt;
+                calcPreview.classList.remove('hidden');
+                calcText.innerHTML = `<span>Sum Total: ₹${currentExistingAmount.toLocaleString('en-IN')} (Existing) + ₹${enteredAmt.toLocaleString('en-IN')} (New) = <strong class="text-emerald-950 font-extrabold text-sm ml-0.5">₹${newTotal.toLocaleString('en-IN')}</strong></span>`;
+            } else {
+                calcPreview.classList.add('hidden');
+            }
+
+            // Update Dynamic QR with the entered contribution amount so resident pays new amount
+            updateDynamicQrCode();
+        }
+
+        function toggleQrCodeView() {
+            const qrSection = document.getElementById('dynamic-qr-section');
+            const btnText = document.getElementById('toggle-qr-btn-text');
+            const btnIcon = document.getElementById('toggle-qr-btn-icon');
+            if (qrSection.classList.contains('hidden')) {
+                qrSection.classList.remove('hidden');
+                btnText.innerText = 'Hide QR Code';
+                btnIcon.className = 'fas fa-chevron-up text-xs';
+                updateDynamicQrCode();
+            } else {
+                qrSection.classList.add('hidden');
+                btnText.innerText = 'Show Dynamic QR';
+                btnIcon.className = 'fas fa-qrcode text-xs';
+            }
+        }
+
+        function updateDynamicQrCode() {
+            const building = document.getElementById('resident-building')?.value || 'B1';
+            const flat = document.getElementById('resident-flat')?.value || '101';
+            const amountVal = document.getElementById('payment-amount')?.value || '';
+            const numericAmt = parseFloat(amountVal) || 0;
+
+            const upiId = CONFIG.UPI_ID || '9595132150@timecosmos';
+            const payeeName = CONFIG.UPI_PAYEE_NAME || 'Nyati Elan Cultural Forum';
+            const note = `Flat ${building}-${flat} 2026 Collection`;
+
+            const qrImg = document.getElementById('dynamic-qr-img');
+            const qrAmountLabel = document.getElementById('qr-amount-label');
+            const qrUpiLabel = document.getElementById('qr-upi-label');
+
+            if (qrUpiLabel) qrUpiLabel.innerText = upiId;
+            if (qrAmountLabel) {
+                qrAmountLabel.innerText = numericAmt > 0 ? `₹${numericAmt.toLocaleString('en-IN')}` : '₹0 (Enter amount)';
+            }
+
+            if (qrImg) {
+                // Standard UPI URI format
+                const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(numericAmt > 0 ? numericAmt : '')}&tn=${encodeURIComponent(note)}&cu=INR`;
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(upiUri)}`;
+            }
+        }
+
+        function copyUpiId() {
+            const upiId = CONFIG.UPI_ID || '9595132150@timecosmos';
+            navigator.clipboard.writeText(upiId).then(() => {
+                showNotification(`Copied UPI ID: ${upiId}`);
+            }).catch(() => {
+                showNotification(`UPI ID: ${upiId}`);
+            });
+        }
+
+        // --- RESIDENT MODAL & WHATSAPP RECEIPT LOGIC ---
+        function openResidentModal(building, flat) {
+            try {
+                const modal = document.getElementById('resident-modal');
+                const resident = communityData[building]?.residents[flat];
+
+                document.getElementById('modal-title').innerText = `Flat ${building}-${flat} Details`;
+
+                // Populate 2025 Historical Contribution
+                const prev2025El = document.getElementById('modal-prev-2025');
+                const chipPrevYear = document.getElementById('chip-prev-year');
+                const chipPrevYearText = document.getElementById('chip-prev-year-text');
+
+                if (prev2025El) {
+                    const val2025 = resident?.amount2025;
+                    if (val2025 && val2025 !== '?' && val2025 !== '0' && val2025 !== '₹0') {
+                        prev2025El.innerText = val2025.startsWith('₹') ? val2025 : `₹${val2025}`;
+                        const rawNumeric2025 = String(val2025).replace(/[^0-9.]/g, '');
+                        if (rawNumeric2025 && parseFloat(rawNumeric2025) > 0 && chipPrevYear) {
+                            chipPrevYear.classList.remove('hidden');
+                            chipPrevYear.setAttribute('data-amount', rawNumeric2025);
+                            chipPrevYearText.innerText = `Same as 2025 (₹${parseFloat(rawNumeric2025).toLocaleString('en-IN')})`;
+                        }
+                    } else {
+                        prev2025El.innerText = '₹0 / Not recorded';
+                        if (chipPrevYear) chipPrevYear.classList.add('hidden');
+                    }
+                }
+
+                // Populate Existing Paid Total Banner & setup sum logic
+                const prevAmountNum = parseFloat(resident?.amount) || 0;
+                const prevBanner = document.getElementById('prev-payment-banner');
+                const prevAmountDisplay = document.getElementById('prev-paid-amount-display');
+                const prevDateDisplay = document.getElementById('prev-paid-date-display');
+                const amountLabel = document.getElementById('payment-amount-label');
+                const addToggle = document.getElementById('add-to-existing-toggle');
+
+                currentExistingAmount = prevAmountNum;
+                currentExistingComments = resident?.comments || '';
+                currentExistingDate = resident?.date || '';
+
+                if (prevAmountNum > 0) {
+                    prevBanner.classList.remove('hidden');
+                    prevAmountDisplay.innerText = `₹${prevAmountNum.toLocaleString('en-IN')}`;
+                    prevDateDisplay.innerText = resident?.date ? `Last recorded: ${resident.date}` : 'Previous contribution exists';
+                    if (addToggle) addToggle.checked = true;
+                    if (amountLabel) amountLabel.innerText = 'New Payment Amount (₹)';
+                    document.getElementById('payment-amount').value = '';
+                    document.getElementById('payment-amount').placeholder = 'Enter new contribution';
+                } else {
+                    prevBanner.classList.add('hidden');
+                    if (amountLabel) amountLabel.innerText = 'Amount (₹)';
+                    document.getElementById('payment-amount').value = '';
+                    document.getElementById('payment-amount').placeholder = 'e.g. 2000';
+                }
+
+                // Populate Audit Info if record exists
+                const auditInfo = document.getElementById('modal-audit-info');
+                const auditText = document.getElementById('modal-audit-text');
+                if (resident && resident.date) {
+                    auditInfo.classList.remove('hidden');
+                    auditText.innerText = `Recorded: ${resident.date}${resident.recordedBy ? ` by ${resident.recordedBy}` : ''}`;
+                } else {
+                    auditInfo.classList.add('hidden');
+                }
+
+                document.getElementById('resident-name').value = resident?.name || '';
+                document.getElementById('resident-phone').value = resident?.phone || '';
+                document.getElementById('payment-status').value = resident?.status || 'Unpaid';
+                document.getElementById('payment-mode').value = resident?.paymentMode || 'UPI';
+                document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('comments').value = '';
+                document.getElementById('comments').placeholder = prevAmountNum > 0 ? 'Optional note for this new payment' : 'Optional notes or transaction UTR number';
+                document.getElementById('resident-building').value = building;
+                document.getElementById('resident-flat').value = flat;
+
+                // Refresh Dynamic QR & calculation preview
+                updateAmountPreview();
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    modal.querySelector('.modal-content').classList.remove('scale-95');
+                    modal.classList.remove('opacity-0');
+                }, 10);
+            } catch (err) {
+                console.error("Error opening flat modal for:", building, flat, err);
+                showNotification(`Error loading flat ${building}-${flat}: ${err.message}`, true);
+            }
+        }
+
+        function closeResidentModal() {
+            const modal = document.getElementById('resident-modal');
+            modal.querySelector('.modal-content').classList.add('scale-95');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        async function handleFormSubmit() {
+            const enteredAmount = parseFloat(document.getElementById('payment-amount').value) || 0;
+            const isAddChecked = document.getElementById('add-to-existing-toggle')?.checked;
+            const userComment = document.getElementById('comments').value.trim();
+            const paymentMode = document.getElementById('payment-mode').value || 'UPI';
+            const recordedBy = loggedInUser?.name || loggedInUser?.email || 'Admin';
+
+            const chosenDate = document.getElementById('payment-date').value || new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            const fullTimestamp = `${chosenDate} ${timeStr}`;
+
+            let finalTotalAmount = enteredAmount;
+            let finalComments = userComment;
+            let isAdditionalPayment = false;
+
+            if (currentExistingAmount > 0 && isAddChecked && enteredAmount > 0) {
+                isAdditionalPayment = true;
+                finalTotalAmount = currentExistingAmount + enteredAmount;
+                const newEntryNote = `[${fullTimestamp}]: +₹${enteredAmount.toLocaleString('en-IN')} (${paymentMode}) by ${recordedBy}${userComment ? ` - ${userComment}` : ''}`;
+
+                if (currentExistingComments && currentExistingComments.trim()) {
+                    finalComments = `${currentExistingComments}\n${newEntryNote}`;
+                } else {
+                    finalComments = `[${currentExistingDate || 'Initial'}]: ₹${currentExistingAmount.toLocaleString('en-IN')}\n${newEntryNote}`;
+                }
+            } else if (currentExistingAmount > 0 && !isAddChecked) {
+                finalTotalAmount = enteredAmount;
+                const overrideNote = `[${fullTimestamp}]: Total updated to ₹${enteredAmount.toLocaleString('en-IN')} (${paymentMode}) by ${recordedBy}${userComment ? ` - ${userComment}` : ''}`;
+                finalComments = currentExistingComments ? `${currentExistingComments}\n${overrideNote}` : overrideNote;
+            } else if (userComment) {
+                finalComments = `[${fullTimestamp}]: ₹${enteredAmount.toLocaleString('en-IN')} (${paymentMode}) by ${recordedBy} - ${userComment}`;
+            }
+
+            const residentData = {
+                building: document.getElementById('resident-building').value,
+                flat: document.getElementById('resident-flat').value,
+                name: document.getElementById('resident-name').value,
+                phone: document.getElementById('resident-phone').value,
+                status: document.getElementById('payment-status').value,
+                amount: finalTotalAmount,
+                paymentMode: paymentMode,
+                date: fullTimestamp,
+                comments: finalComments,
+                recordedBy: recordedBy
+            };
+
+            document.getElementById('loader-overlay').style.display = 'flex';
+            await updateSheetViaBackend(residentData);
+
+            // Trigger WhatsApp confirmation receipt if payment is marked Paid
+            if (residentData.status === 'Paid') {
+                sendWhatsAppReceipt(fullTimestamp, enteredAmount, finalTotalAmount, isAdditionalPayment);
+            }
+
+            document.getElementById('loader-overlay').style.display = 'none';
+            closeResidentModal();
+        }
+
+        function sendWhatsAppReceipt(customTimestamp = null, newAmount = 0, totalAmount = 0, isAdditional = false) {
+            const building = document.getElementById('resident-building').value;
+            const flat = document.getElementById('resident-flat').value;
+            const name = document.getElementById('resident-name').value;
+            let phone = document.getElementById('resident-phone').value;
+            const status = document.getElementById('payment-status').value;
+            const paymentMode = document.getElementById('payment-mode').value || 'UPI';
+            const dateVal = document.getElementById('payment-date').value;
+
+            const effectiveAmount = newAmount > 0 ? newAmount : (totalAmount > 0 ? totalAmount : parseFloat(document.getElementById('payment-amount').value) || 0);
+
+            if (!phone || effectiveAmount <= 0 || status !== 'Paid') {
+                return;
+            }
+
+            let cleanPhone = phone.replace(/[^0-9]/g, '');
+            if (cleanPhone.length === 10) {
+                cleanPhone = '91' + cleanPhone;
+            }
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const formattedDate = dateVal
+                ? new Date(dateVal).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                : new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const formattedNewAmount = new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 0
+            }).format(effectiveAmount);
+
+            const formattedTotalAmount = new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 0
+            }).format(totalAmount > 0 ? totalAmount : effectiveAmount);
+
+            let amountSection = `• *Amount Received:* ${formattedNewAmount}`;
+            if (isAdditional && totalAmount > effectiveAmount) {
+                amountSection = `• *New Payment Received:* ${formattedNewAmount}\n• *Total Contributed to Date:* ${formattedTotalAmount}`;
+            }
+
+            const message = `*Nyati Elan Cultural Forum - Payment Receipt*\n\n` +
+                `Dear *${name}*,\n\n` +
+                `Thank you! We have received your payment for the community forum.\n\n` +
+                `📋 *Transaction Details:*\n` +
+                `• *Flat:* ${building}-${flat}\n` +
+                `${amountSection}\n` +
+                `• *Payment Mode:* ${paymentMode}\n` +
+                `• *Date & Time:* ${formattedDate} (${timeStr})\n` +
+                `• *Status:* Confirmed (Paid)\n\n` +
+                `Your contribution helps support vibrant community celebrations and initiatives.\n\n` +
+                `Vist this page to check status of your payment and for any more details 🔗 Portal Link: https://nyatielancultural.netlify.app \n\n` +
+                `Warm regards,\n` +
+                `*Nyati Elan Cultural Forum Team*`;
+
+            const encodedMessage = encodeURIComponent(message);
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            // On desktop, use web.whatsapp.com to bypass the "Download WhatsApp" landing page; on mobile use wa.me
+            const whatsappURL = isMobile
+                ? `https://wa.me/${cleanPhone}?text=${encodedMessage}`
+                : `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
+
+            const a = document.createElement('a');
+            a.href = whatsappURL;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function jwt_decode(token) {
+            var base64Url = token.split('.')[1];
+            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            var jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        function showNotification(message, isError = false) {
+            const toast = document.getElementById('notification-toast');
+            const messageEl = document.getElementById('notification-message');
+            const iconEl = document.getElementById('notification-icon');
+
+            messageEl.textContent = message;
+            toast.className = 'fixed bottom-5 right-5 text-white px-6 py-3.5 rounded-xl shadow-xl transform transition-all duration-300 z-50 flex items-center gap-3';
+
+            if (isError) {
+                toast.classList.add('bg-red-600');
+                iconEl.className = 'fas fa-exclamation-circle text-lg';
+            } else {
+                toast.classList.add('bg-green-600');
+                iconEl.className = 'fas fa-check-circle text-lg';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 4500);
+        }
+    </script>
+</body>
+
+</html>
