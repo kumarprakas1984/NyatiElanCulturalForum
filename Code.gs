@@ -135,6 +135,43 @@ function createGanpatiCulturalActivitiesForm() {
 }
 
 /**
+ * Updates the existing Ganpati form with activity-specific registration fields.
+ * Run this once after the form has been created.
+ */
+function updateGanpatiCulturalActivitiesForm() {
+  const formId = '1-Y93jZD5qBvVl4WyL06T12buyXBRW6XrHCjXzRRTXhE';
+  const form = FormApp.openById(formId);
+  const itemTitles = form.getItems().map(function(item) {
+    return item.getTitle();
+  });
+
+  if (itemTitles.indexOf('Dancing Participation Type') === -1) {
+    form.addMultipleChoiceItem()
+      .setTitle('Dancing Participation Type')
+      .setChoiceValues(['Solo', 'Couple', 'Group'])
+      .setHelpText('Select the format for the dancing performance.')
+      .setRequired(false);
+  }
+
+  if (itemTitles.indexOf('Nyati Got Talent - Describe Your Talent') === -1) {
+    form.addParagraphTextItem()
+      .setTitle('Nyati Got Talent - Describe Your Talent')
+      .setHelpText('Complete this only if Nyati Got Talent is selected above.')
+      .setRequired(false);
+  }
+
+  PropertiesService.getScriptProperties().setProperty('GANPATI_FORM_ID', formId);
+  Logger.log('Ganpati form updated with dancing format and talent description fields.');
+  Logger.log('Edit URL: ' + form.getEditUrl());
+  Logger.log('Participant URL: ' + form.getPublishedUrl());
+  return {
+    id: form.getId(),
+    editUrl: form.getEditUrl(),
+    publishedUrl: form.getPublishedUrl()
+  };
+}
+
+/**
  * Handles HTTP GET requests (e.g., ?action=getAllData)
  */
 function doGet(e) {
