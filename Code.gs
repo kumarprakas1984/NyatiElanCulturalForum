@@ -55,6 +55,86 @@ function testFetch() {
 }
 
 /**
+ * Creates the Ganpati cultural activities registration form and links responses
+ * to this project's spreadsheet. Run once from the Apps Script editor.
+ */
+function createGanpatiCulturalActivitiesForm() {
+  const properties = PropertiesService.getScriptProperties();
+  const existingFormId = properties.getProperty('GANPATI_FORM_ID');
+  if (existingFormId) {
+    const existingForm = FormApp.openById(existingFormId);
+    Logger.log('Ganpati registration form already exists.');
+    Logger.log('Edit URL: ' + existingForm.getEditUrl());
+    Logger.log('Participant URL: ' + existingForm.getPublishedUrl());
+    return {
+      id: existingForm.getId(),
+      editUrl: existingForm.getEditUrl(),
+      publishedUrl: existingForm.getPublishedUrl()
+    };
+  }
+
+  const form = FormApp.create('Ganpati Cultural Activities Registration');
+  form.setDescription(
+    'Register participants for Nyati Elan Cultural Forum Ganpati cultural activities. ' +
+    'Please submit one response per participant.'
+  );
+  form.setConfirmationMessage(
+    'Thank you! Your participation has been registered for the Ganpati cultural activities.'
+  );
+  form.setCollectEmail(false);
+
+  form.addTextItem()
+    .setTitle('Participant Name')
+    .setRequired(true);
+  form.addMultipleChoiceItem()
+    .setTitle('Age Group')
+    .setChoiceValues([
+      'Below 5 years',
+      '5-8 years',
+      '9-12 years',
+      '13-17 years',
+      '18-35 years',
+      '36-59 years',
+      '60 years and above'
+    ])
+    .setRequired(true);
+  form.addTextItem()
+    .setTitle('Building and Flat Number')
+    .setHelpText('Example: B1-402')
+    .setRequired(true);
+  form.addTextItem()
+    .setTitle('Mobile Number')
+    .setHelpText('WhatsApp number preferred')
+    .setRequired(true);
+  form.addCheckboxItem()
+    .setTitle('Cultural Activity')
+    .setChoiceValues([
+      'Fancy Dress',
+      'Singing',
+      'Dancing',
+      'Nyati Got Talent'
+    ])
+    .setHelpText('Select all activities in which the participant wants to participate.')
+    .setRequired(true);
+  form.addParagraphTextItem()
+    .setTitle('Special Notes or Performance Details')
+    .setRequired(false);
+
+  const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  form.setDestination(FormApp.DestinationType.SPREADSHEET, spreadsheet.getId());
+  properties.setProperty('GANPATI_FORM_ID', form.getId());
+
+  Logger.log('Ganpati registration form created.');
+  Logger.log('Edit URL: ' + form.getEditUrl());
+  Logger.log('Participant URL: ' + form.getPublishedUrl());
+  return {
+    id: form.getId(),
+    editUrl: form.getEditUrl(),
+    publishedUrl: form.getPublishedUrl()
+  };
+}
+
+/**
  * Handles HTTP GET requests (e.g., ?action=getAllData)
  */
 function doGet(e) {
