@@ -163,7 +163,7 @@
 
     <!-- Global Loader Overlay -->
     <div id="loader-overlay"
-        class="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col items-center justify-center hidden">
+        class="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col items-center justify-center">
         <div class="loader mb-3"></div>
         <p id="loader-text" class="text-sm font-medium text-gray-600">Connecting to cloud database...</p>
     </div>
@@ -844,6 +844,8 @@
         // --- INITIALIZATION & AUTHENTICATION ---
         window.onload = () => {
             console.log("Window loaded. Initializing dynamic year & auth scripts.");
+            document.getElementById('loader-overlay').style.display = 'flex';
+            document.getElementById('loader-text').innerText = 'Connecting to cloud database...';
 
             // Set dynamic year across UI elements
             const currentYear = new Date().getFullYear();
@@ -910,7 +912,7 @@
 
         function maybeEnableButtons() {
             if (gapiInited && gisInited) {
-                document.getElementById('loader-overlay').style.display = 'none';
+                document.getElementById('loader-text').innerText = 'Loading community data from Google Sheet...';
             }
         }
 
@@ -983,6 +985,8 @@
         // --- BACKEND API LOGIC ---
         async function loadAllDataFromBackend() {
             console.log("Attempting to load all data from backend URL:", CONFIG.API_URL);
+            document.getElementById('loader-overlay').style.display = 'flex';
+            document.getElementById('loader-text').innerText = 'Loading community data from Google Sheet...';
             try {
                 const response = await fetch(`${CONFIG.API_URL}?action=getAllData`);
                 const rawText = await response.text();
@@ -1089,6 +1093,8 @@
                 console.error('Error loading data from backend:', err);
                 const message = err.message || 'Failed to load data from backend.';
                 showNotification(message, true);
+            } finally {
+                document.getElementById('loader-overlay').style.display = 'none';
             }
         }
 
@@ -1311,10 +1317,7 @@
             document.getElementById(`${tabName}-tab-btn`).classList.add('active');
 
             if (tabName === 'gallery') updateGalleryView();
-            if (tabName === 'resident') {
-                loadAllDataFromBackend();
-                switchFinanceTab('festival');
-            }
+            if (tabName === 'resident') switchFinanceTab('festival');
             if (tabName === 'events') updateEventsView();
         }
 
