@@ -256,21 +256,33 @@ function fetchAllSheetData() {
   const summarySheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.SUMMARY);
   const summaryValues = summarySheet ? summarySheet.getDataRange().getDisplayValues() : [];
 
-  // 5. Fetch Admins Data (extracts all emails from all cells/columns in Admins sheet)
+  // 5. Fetch Admins Data. Region markers may be in the cell(s) immediately
+  // to the right of each email (N = North, SE = South-East).
   const adminSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.ADMINS) || getSheetCaseInsensitive(ss, 'Admin');
   let adminEmails = [];
+  let adminRegions = {};
   if (adminSheet) {
     const adminValues = adminSheet.getDataRange().getDisplayValues();
     adminValues.forEach(function(row) {
-      row.forEach(function(cell) {
+      row.forEach(function(cell, cellIndex) {
         if (!cell) return;
         const text = cell.toString().trim().toLowerCase();
         // Regex to extract valid email addresses from cell text
         const matches = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
         if (matches) {
+          const adjacentRegions = [];
+          for (let regionIndex = cellIndex + 1; regionIndex < row.length; regionIndex++) {
+            const region = normalizeAdminRegion(row[regionIndex]);
+            if (!region) break;
+            adjacentRegions.push(region);
+          }
+          const adjacentRegion = mergeAdminRegions(adjacentRegions);
           matches.forEach(function(email) {
             if (adminEmails.indexOf(email) === -1) {
               adminEmails.push(email);
+            }
+            if (adjacentRegion) {
+              adminRegions[email] = mergeAdminRegions([adminRegions[email], adjacentRegion]);
             }
           });
         }
@@ -283,8 +295,34 @@ function fetchAllSheetData() {
     expenses: expenseValues,
     events: eventValues,
     summary: summaryValues,
-    admins: adminEmails
+    admins: adminEmails,
+    adminRegions: adminRegions
   };
+}
+
+/**
+ * Normalizes an Admins-sheet region marker while treating unknown values as
+ * unscoped so those admins retain the existing full-access behavior.
+ */
+function normalizeAdminRegion(value) {
+  const region = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!region) return '';
+  if (region === 'BOTH') return 'BOTH';
+  const hasNorth = /(^|[,/|+&])(?:N|NORTH)(?=$|[,/|+&])/.test(region);
+  const hasSouthEast = /(^|[,/|+&])(?:SE|SOUTH-EAST|SOUTHEAST)(?=$|[,/|+&])/.test(region);
+  if (hasNorth && hasSouthEast) return 'BOTH';
+  if (hasNorth) return 'N';
+  if (hasSouthEast) return 'SE';
+  return '';
+}
+
+function mergeAdminRegions(regions) {
+  const hasNorth = regions.some(function(region) { return region === 'N' || region === 'BOTH'; });
+  const hasSouthEast = regions.some(function(region) { return region === 'SE' || region === 'BOTH'; });
+  if (hasNorth && hasSouthEast) return 'BOTH';
+  if (hasNorth) return 'N';
+  if (hasSouthEast) return 'SE';
+  return '';
 }
 
 /**

@@ -299,6 +299,7 @@
                                 Building</label>
                             <select id="building-select"
                                 class="w-full p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg bg-white shadow-sm"></select>
+                            <p id="admin-building-access-note" class="mt-1 text-xs text-gray-500"></p>
                         </div>
 
                         <!-- Unpaid Flats Quick Filter Toggle -->
@@ -846,6 +847,7 @@
         let allExpenses = [];
         let allEvents = [];
         let adminEmails = [];
+        let adminRegions = {};
         let selectedBuilding = null;
         let loggedInUser = null;
         let expenseHeaders = [];
@@ -861,6 +863,19 @@
             "A2": { floors: 12, flatsPerFloor: 4 },
             "G9": { floors: 12, flatsPerFloor: 6 },
             "G10": { floors: 12, flatsPerFloor: 6 },
+            "C1": { floors: 12, flatsPerFloor: 4 },
+            "B17": { floors: 12, flatsPerFloor: 4 },
+            "B18": { floors: 12, flatsPerFloor: 4 },
+            "E1": { floors: 12, flatsPerFloor: 6 },
+            "F3": { floors: 12, flatsPerFloor: 8 },
+        };
+
+        const BUILDING_REGIONS = {
+            "C1": "N",
+            "B17": "N",
+            "B18": "N",
+            "E1": "N",
+            "F3": "N",
         };
 
         // --- INITIALIZATION & AUTHENTICATION ---
@@ -950,8 +965,10 @@
                 const adminTab = document.getElementById('admin-tab-btn');
                 const userEmail = (loggedInUser?.email || '').trim().toLowerCase();
                 const isAdmin = adminEmails.some(adm => adm.trim().toLowerCase() === userEmail);
+                const adminRegion = adminRegions[userEmail] || '';
                 console.log("Logged-in user email:", userEmail);
                 console.log("Authorized admin emails:", adminEmails);
+                console.log("Admin region:", adminRegion || 'ALL');
                 console.log("Is Admin Match?:", isAdmin);
 
                 if (isAdmin) {
@@ -1096,6 +1113,7 @@
 
                 // Process Admins
                 adminEmails = (data.admins || []).map(email => email.trim().toLowerCase());
+                adminRegions = data.adminRegions || {};
                 console.log(`Loaded ${adminEmails.length} admin emails:`, adminEmails);
 
                 populateCommunityData();
@@ -1498,8 +1516,10 @@
 
         function setupFilters() {
             const festivalFilter = document.getElementById('festival-filter');
-            const celebrationHeader = expenseHeaders.find(h => h.toLowerCase().trim() === 'celebration');
-            const uniqueFestivals = celebrationHeader ? [...new Set(allExpenses.map(exp => exp[celebrationHeader]).filter(Boolean))] : [];
+            const categoryHeader = getExpenseCategoryHeader();
+            const uniqueFestivals = categoryHeader
+                ? [...new Set(allExpenses.map(exp => String(exp[categoryHeader] || '').trim()).filter(Boolean))]
+                : [];
             festivalFilter.innerHTML = '<option value="All">All Festivals</option>';
             uniqueFestivals.forEach(festival => {
                 festivalFilter.innerHTML += `<option value="${festival}">${festival}</option>`;
@@ -1525,8 +1545,10 @@
 
         function displayFilteredExpenses() {
             const selectedFestival = document.getElementById('festival-filter').value;
-            const celebrationHeader = expenseHeaders.find(h => h.toLowerCase().trim() === 'celebration');
-            const filteredExpenses = selectedFestival === 'All' ? allExpenses : allExpenses.filter(exp => exp[celebrationHeader] === selectedFestival);
+            const categoryHeader = getExpenseCategoryHeader();
+            const filteredExpenses = selectedFestival === 'All' || !categoryHeader
+                ? allExpenses
+                : allExpenses.filter(exp => String(exp[categoryHeader] || '').trim() === selectedFestival);
             const headersToDisplay = expenseHeaders.filter(header => header.toLowerCase().trim() !== 'volunteer name');
             const expenseHeaderRow = document.getElementById('expense-header-row');
             const expenseTableBody = document.getElementById('expense-table-body');
@@ -1551,6 +1573,18 @@
                     expenseTableBody.innerHTML += rowHtml;
                 });
             }
+        }
+
+        function normalizeExpenseHeader(header) {
+            return String(header || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        function getExpenseCategoryHeader() {
+            return expenseHeaders.find(header => {
+                const normalized = normalizeExpenseHeader(header);
+                return normalized === 'festival' || normalized === 'celebration' ||
+                    normalized.includes('festival') || normalized.includes('celebration');
+            }) || null;
         }
 
         function displayFilteredCollections() {
@@ -1672,13 +1706,36 @@
             console.log("Setting up building selector.");
             const buildingSelect = document.getElementById('building-select');
             buildingSelect.innerHTML = '<option value="">-- Choose a Building --</option>';
-            Object.keys(BUILDINGS).forEach(name => {
+            const accessibleBuildings = getAccessibleBuildings();
+            accessibleBuildings.forEach(name => {
                 const option = document.createElement('option');
                 option.value = name;
                 option.textContent = `Building ${name}`;
                 buildingSelect.appendChild(option);
             });
+            const accessNote = document.getElementById('admin-building-access-note');
+            if (accessNote) {
+                const region = getAdminRegion();
+                const regionLabel = region === 'N' ? 'North' : region === 'SE' ? 'South-East' : 'all';
+                accessNote.innerText = region
+                    ? `Showing ${regionLabel} buildings assigned to your admin account.`
+                    : 'Showing all buildings.';
+            }
             buildingSelect.addEventListener('change', handleBuildingSelect);
+        }
+
+        function getAdminRegion() {
+            const email = (loggedInUser?.email || '').trim().toLowerCase();
+            return adminRegions[email] || '';
+        }
+
+        function getAccessibleBuildings() {
+            const region = getAdminRegion();
+            return Object.keys(BUILDINGS).filter(name => !region || region === 'BOTH' || (BUILDING_REGIONS[name] || 'SE') === region);
+        }
+
+        function canAccessBuilding(buildingName) {
+            return getAccessibleBuildings().indexOf(buildingName) !== -1;
         }
 
         function handleBuildingSelect(event) {
@@ -1720,6 +1777,10 @@
         function generateFlatGrid(buildingName) {
             const container = document.getElementById('flat-grid-container');
             const heading = document.getElementById('flat-grid-heading');
+            if (!canAccessBuilding(buildingName)) {
+                container.innerHTML = '<p class="text-gray-500">This building is outside your admin region.</p>';
+                return;
+            }
             const buildingLayout = BUILDINGS[buildingName];
             if (!buildingLayout) {
                 container.innerHTML = '<p class="text-gray-500">Building layout not defined.</p>';
@@ -1807,7 +1868,7 @@
             const matchingFlats = [];
 
             // Search through all possible building flats
-            Object.keys(BUILDINGS).forEach(bName => {
+            getAccessibleBuildings().forEach(bName => {
                 const bLayout = BUILDINGS[bName];
                 for (let floor = 1; floor <= bLayout.floors; floor++) {
                     for (let flatNum = 1; flatNum <= bLayout.flatsPerFloor; flatNum++) {
@@ -2018,6 +2079,10 @@
         // --- RESIDENT MODAL & WHATSAPP RECEIPT LOGIC ---
         function openResidentModal(building, flat) {
             try {
+                if (!canAccessBuilding(building)) {
+                    showNotification('This building is outside your admin region.', true);
+                    return;
+                }
                 const modal = document.getElementById('resident-modal');
                 const resident = communityData[building]?.residents[flat];
 
@@ -2117,6 +2182,11 @@
         }
 
         async function handleFormSubmit() {
+            const selectedResidentBuilding = document.getElementById('resident-building').value;
+            if (!canAccessBuilding(selectedResidentBuilding)) {
+                showNotification('This building is outside your admin region.', true);
+                return;
+            }
             const enteredAmount = parseFloat(document.getElementById('payment-amount').value) || 0;
             const isAddChecked = document.getElementById('add-to-existing-toggle')?.checked;
             const userComment = document.getElementById('comments').value.trim();
