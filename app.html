@@ -732,7 +732,7 @@
                     </div>
 
                     <!-- Dynamic UPI QR Code Box -->
-                    <div class="border border-indigo-100 bg-indigo-50/50 rounded-xl p-3.5 space-y-3">
+                    <div id="dynamic-qr-box" class="border border-indigo-100 bg-indigo-50/50 rounded-xl p-3.5 space-y-3">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <div
@@ -867,8 +867,8 @@
             "C1": { floors: 12, flatsPerFloor: 4 },
             "B17": { floors: 12, flatsPerFloor: 4 },
             "B18": { floors: 12, flatsPerFloor: 4 },
-            "E1": { floors: 12, flatsPerFloor: 6 },
-            "F3": { floors: 12, flatsPerFloor: 8 },
+            "E1": { floors: 12, flatsPerFloor: 8 },
+            "F3": { floors: 12, flatsPerFloor: 6 },
         };
 
         const BUILDING_REGIONS = {
@@ -2026,7 +2026,31 @@
             updateDynamicQrCode();
         }
 
+        function setQrAvailability(building) {
+            const qrBox = document.getElementById('dynamic-qr-box');
+            const qrSection = document.getElementById('dynamic-qr-section');
+            const btnText = document.getElementById('toggle-qr-btn-text');
+            const btnIcon = document.getElementById('toggle-qr-btn-icon');
+            const qrImg = document.getElementById('dynamic-qr-img');
+            const isNorthBuilding = BUILDING_REGIONS[building] === 'N';
+
+            if (isNorthBuilding) {
+                qrBox?.classList.add('hidden');
+                qrSection?.classList.add('hidden');
+                if (btnText) btnText.innerText = 'Show Dynamic QR';
+                if (btnIcon) btnIcon.className = 'fas fa-qrcode text-xs';
+                if (qrImg) qrImg.removeAttribute('src');
+            } else {
+                qrBox?.classList.remove('hidden');
+            }
+
+            return !isNorthBuilding;
+        }
+
         function toggleQrCodeView() {
+            const building = document.getElementById('resident-building')?.value || '';
+            if (!setQrAvailability(building)) return;
+
             const qrSection = document.getElementById('dynamic-qr-section');
             const btnText = document.getElementById('toggle-qr-btn-text');
             const btnIcon = document.getElementById('toggle-qr-btn-icon');
@@ -2047,6 +2071,8 @@
             const flat = document.getElementById('resident-flat')?.value || '101';
             const amountVal = document.getElementById('payment-amount')?.value || '';
             const numericAmt = parseFloat(amountVal) || 0;
+
+            if (!setQrAvailability(building)) return;
 
             const upiId = CONFIG.UPI_ID || '9595132150@timecosmos';
             const payeeName = CONFIG.UPI_PAYEE_NAME || 'Nyati Elan Cultural Forum';
