@@ -380,7 +380,7 @@
 
             <!-- TAB 2: RESIDENT / FINANCE VIEW -->
             <main id="resident-view" class="hidden bg-white rounded-2xl shadow-lg p-6 space-y-8">
-                <div class="hidden">
+                <div id="financial-summary-section" class="hidden">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                         <i class="fas fa-wallet text-indigo-600"></i> Financial Summary
                     </h2>
@@ -974,6 +974,7 @@
 
                 if (isAdmin) {
                     adminTab.style.display = 'flex';
+                    setFinanceSummaryVisibility(adminRegion === 'SE' || adminRegion === 'BOTH');
                     document.getElementById('admin-login-btn').classList.add('hidden');
                     document.getElementById('signout-btn').classList.remove('hidden');
                     document.getElementById('signout-btn').classList.add('flex');
@@ -981,6 +982,7 @@
                     switchTab('admin');
                 } else {
                     adminTab.style.display = 'none';
+                    setFinanceSummaryVisibility(false);
                     loggedInUser = null;
                     showNotification('This Google account is not registered as an admin.', true);
                     closeAdminLogin();
@@ -1005,6 +1007,7 @@
             }
             loggedInUser = null;
             document.getElementById('admin-tab-btn').style.display = 'none';
+            setFinanceSummaryVisibility(false);
             document.getElementById('admin-login-btn').classList.remove('hidden');
             document.getElementById('signout-btn').classList.add('hidden');
             document.getElementById('signout-btn').classList.remove('flex');
@@ -1360,6 +1363,11 @@
             if (tabName === 'gallery') updateGalleryView();
             if (tabName === 'resident') switchFinanceTab('festival');
             if (tabName === 'events') updateEventsView();
+        }
+
+        function setFinanceSummaryVisibility(isVisible) {
+            const summary = document.getElementById('financial-summary-section');
+            if (summary) summary.classList.toggle('hidden', !isVisible);
         }
 
         function switchFinanceTab(subTabName) {
