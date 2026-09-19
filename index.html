@@ -1,18 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nyati Elan Cultural Forum</title>
-    <meta http-equiv="refresh" content="0; url=app.html">
-    <script>
-        window.location.replace('app.html');
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#4338ca">
+  <title>Nyati Elan Cultural Forum</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #596579;
+      --line: #e7eaf2;
+      --brand: #4f46e5;
+      --brand-dark: #3730a3;
+      --shadow: rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 10% 0%, #e0e7ff 0%, transparent 30%), var(--bg);
+      color: var(--ink);
+    }
+    .shell { width: min(1120px, calc(100% - 32px)); margin: auto; }
+    .hero { padding: 72px 0 48px; }
+    .eyebrow {
+      color: var(--brand);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+    h1 {
+      margin: 14px 0 18px;
+      max-width: 760px;
+      font-size: clamp(2.3rem, 6vw, 4.6rem);
+      letter-spacing: -0.06em;
+      line-height: 1.04;
+    }
+    .lead {
+      max-width: 650px;
+      font-size: 1.08rem;
+      line-height: 1.7;
+      color: var(--muted);
+      margin: 0;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 30px;
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      text-decoration: none;
+      font-weight: 800;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px var(--shadow);
+    }
+    .primary {
+      background: var(--brand);
+      color: white;
+      border-color: var(--brand);
+    }
+    .primary:hover { background: var(--brand-dark); }
+    .secondary {
+      background: white;
+      color: var(--ink);
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      padding-bottom: 54px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 10px 28px var(--shadow);
+    }
+    .icon {
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+    }
+    .card strong {
+      display: block;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    .card span {
+      display: block;
+      line-height: 1.6;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 24px 0 32px;
+      font-size: 0.88rem;
+      color: #7a8495;
+    }
+    @media (max-width: 640px) {
+      .hero { padding-top: 56px; }
+      .actions { flex-direction: column; }
+      .button { width: 100%; }
+    }
+  </style>
 </head>
 <body>
-    <p>Opening the Nyati Elan Cultural Forum portal...</p>
-    <noscript>
-        <p><a href="app.html">Open the community portal</a></p>
-    </noscript>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Community • Culture • Connection</div>
+      <h1>Nyati Elan Cultural Forum</h1>
+      <p class="lead">A clearer, faster community portal for resident management, finance tracking, events, and participation details.</p>
+      <div class="actions">
+        <a class="button primary" href="app.html">Open community hub →</a>
+        <a class="button secondary" href="participants.html">View participation list ↗</a>
+      </div>
+    </section>
+
+    <section class="cards" aria-label="Portal highlights">
+      <article class="card">
+        <div class="icon">🏠</div>
+        <strong>Community hub</strong>
+        <span>Fast access to resident records, finance dashboards and admin workflows.</span>
+      </article>
+      <article class="card">
+        <div class="icon">🎭</div>
+        <strong>Participation tracker</strong>
+        <span>Dedicated searchable view for cultural registrations and activity participation.</span>
+      </article>
+      <article class="card">
+        <div class="icon">📊</div>
+        <strong>Improved clarity</strong>
+        <span>Cleaner cards, readability improvements, and a lighter interface for better usability.</span>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">© <span id="year"></span> Nyati Elan Cultural Forum</div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
