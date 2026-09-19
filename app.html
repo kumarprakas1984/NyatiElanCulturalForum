@@ -846,6 +846,10 @@
 
         // --- GLOBAL STATE & PERFORMANCE CACHE ---
         const CACHE_KEY = 'nyati-community-data-v2';
+        const FETCH_TIMEOUT_MS = 20000;
+        // Incremented by write operations that own the loader overlay, so a silent
+        // background refresh completing mid-write cannot dismiss it underneath them.
+        let pendingBlockingOps = 0;
         let activeFetchPromise = null;
         let quickSearchTimer = null;
         let communityRawSummary = [];
@@ -897,8 +901,31 @@
         };
 
         // --- INITIALIZATION & AUTHENTICATION ---
-        window.onload = () => {
-            console.log("Window loaded. Initializing dynamic year, cache & auth scripts.");
+        // The loader overlay is visible in the markup on first paint, so every
+        // init path (including the silent/cached one and any early return) must
+        // dismiss it explicitly or the app stays stuck behind a white screen.
+        function hideLoaderOverlay() {
+            const overlay = document.getElementById('loader-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        // Blocking operations (writes, uploads) claim the overlay via this pair so
+        // that it is always released, even when the operation throws.
+        function showBlockingLoader(text) {
+            pendingBlockingOps++;
+            const overlay = document.getElementById('loader-overlay');
+            if (overlay) overlay.style.display = 'flex';
+            const label = document.getElementById('loader-text');
+            if (label && text) label.innerText = text;
+        }
+
+        function hideBlockingLoader() {
+            pendingBlockingOps = Math.max(0, pendingBlockingOps - 1);
+            if (pendingBlockingOps === 0) hideLoaderOverlay();
+        }
+
+        function initApp() {
+            console.log("DOM ready. Initializing dynamic year, cache & auth scripts.");
 
             // Set dynamic year across UI elements
             const currentYear = new Date().getFullYear();
@@ -907,14 +934,16 @@
             if (dynamicYearLabel) dynamicYearLabel.innerText = currentYear;
 
             if (!CONFIG.API_URL || CONFIG.API_URL === 'PASTE_YOUR_WEB_APP_URL_HERE') {
-                alert("CRITICAL ERROR: API_URL is not set in the HTML file. Please deploy the Google Apps Script and paste the URL into the CONFIG section.");
+                hideLoaderOverlay();
+                showNotification("Configuration error: the backend API URL is not set. Please deploy the Google Apps Script and paste its URL into the CONFIG section.", true);
                 return;
             }
-            switchTab('resident');
 
             // 1. Instant Render from LocalStorage Cache (Stale-While-Revalidate)
             let hasCachedData = false;
             try {
+                switchTab('resident');
+
                 const cachedRaw = localStorage.getItem(CACHE_KEY);
                 if (cachedRaw) {
                     const parsed = JSON.parse(cachedRaw);
@@ -924,11 +953,19 @@
                         hasCachedData = true;
                     }
                 }
-            } catch (cacheErr) {
-                console.warn("Could not read from localStorage cache:", cacheErr);
+            } catch (initErr) {
+                // A stale or malformed cache must never trap the user behind the
+                // overlay - fall through and let the network fetch repopulate.
+                console.warn("Initial render from cache failed, falling back to network:", initErr);
+                hasCachedData = false;
             }
 
-            // 2. Fetch fresh data in background (silent if cached data is already displayed)
+            // Cached content is already on screen, so drop the overlay now and let
+            // the refresh happen silently. With no cache, loadAllDataFromBackend()
+            // owns the overlay and hides it when the first payload arrives.
+            if (hasCachedData) hideLoaderOverlay();
+
+            // 2. Fetch fresh data (silent if cached data is already displayed)
             loadAllDataFromBackend({ silent: hasCachedData });
 
             // 3. Initialize Google Identity Services in parallel
@@ -945,7 +982,15 @@
             gisScript.defer = true;
             gisScript.onload = gisLoaded;
             document.body.appendChild(gisScript);
-        };
+        }
+
+        // Start as soon as the DOM is parsed. Waiting for window.onload would block
+        // startup behind every third-party font and image on the page.
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
 
         function gapiLoaded() {
             console.log("GAPI script loaded.");
@@ -990,14 +1035,15 @@
 
         async function handleCredentialResponse(response) {
             console.log("Credential response received - 1-step sign-in.");
+            let claimedLoader = false;
             try {
                 loggedInUser = jwt_decode(response.credential);
                 document.getElementById('user-greeting').innerText = `Logged in as: ${loggedInUser.name} (${loggedInUser.email})`;
 
                 // If data is still loading on first-ever load, wait for in-flight fetch; otherwise data is already ready
                 if (allResidents.length === 0 && activeFetchPromise) {
-                    document.getElementById('loader-overlay').style.display = 'flex';
-                    document.getElementById('loader-text').innerText = 'Completing authentication...';
+                    showBlockingLoader('Completing authentication...');
+                    claimedLoader = true;
                     await activeFetchPromise;
                 }
 
@@ -1029,7 +1075,7 @@
                 console.error("Error during authentication transition:", err);
                 showNotification("Authentication failed: " + err.message, true);
             } finally {
-                document.getElementById('loader-overlay').style.display = 'none';
+                if (claimedLoader) hideBlockingLoader();
             }
         }
 
@@ -1156,14 +1202,29 @@
             }
 
             if (!isSilent) {
-                document.getElementById('loader-overlay').style.display = 'flex';
+                const overlay = document.getElementById('loader-overlay');
+                if (overlay) overlay.style.display = 'flex';
                 document.getElementById('loader-text').innerText = 'Loading community data from Google Sheet...';
             }
 
             activeFetchPromise = (async () => {
                 try {
                     console.log("Fetching fresh data from backend URL:", CONFIG.API_URL);
-                    const response = await fetch(`${CONFIG.API_URL}?action=getAllData`, { cache: 'no-cache' });
+                    // Without a timeout a stalled Apps Script request never settles,
+                    // leaving the loader overlay up indefinitely.
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+                    let response;
+                    try {
+                        response = await fetch(`${CONFIG.API_URL}?action=getAllData`, { cache: 'no-cache', signal: controller.signal });
+                    } catch (fetchErr) {
+                        if (fetchErr.name === 'AbortError') {
+                            throw new Error('The community data request timed out. Please check your connection and retry.');
+                        }
+                        throw fetchErr;
+                    } finally {
+                        clearTimeout(timeoutId);
+                    }
                     const rawText = await response.text();
 
                     let result;
@@ -1200,8 +1261,8 @@
                     }
                 } finally {
                     activeFetchPromise = null;
-                    if (!isSilent) {
-                        document.getElementById('loader-overlay').style.display = 'none';
+                    if (!isSilent && pendingBlockingOps === 0) {
+                        hideLoaderOverlay();
                     }
                 }
             })();
@@ -1327,7 +1388,7 @@
 
             const submitButton = document.querySelector('#expense-form button[type="submit"]');
             submitButton.disabled = true;
-            document.getElementById('loader-overlay').style.display = 'flex';
+            showBlockingLoader('Saving expense...');
             try {
                 const receiptFile = document.getElementById('expense-receipt').files[0];
                 const receiptUrl = receiptFile ? await uploadExpenseReceipt(receiptFile) : '';
@@ -1359,7 +1420,7 @@
                 showNotification(`Failed to save expense: ${err.message}`, true);
             } finally {
                 submitButton.disabled = false;
-                document.getElementById('loader-overlay').style.display = 'none';
+                hideBlockingLoader();
             }
         }
 
@@ -1412,7 +1473,7 @@
                 showNotification('Please select a file to upload.', true);
                 return;
             }
-            document.getElementById('loader-overlay').style.display = 'flex';
+            showBlockingLoader('Uploading photo...');
             try {
                 const accessToken = await ensureDriveAccessToken();
                 const metadata = { 'name': file.name, 'parents': [CONFIG.DRIVE_FOLDER_ID] };
@@ -1438,7 +1499,7 @@
                 console.error('Error uploading file:', err);
                 showNotification(`Failed to upload file: ${err.message}`, true);
             } finally {
-                document.getElementById('loader-overlay').style.display = 'none';
+                hideBlockingLoader();
             }
         }
 
@@ -1793,21 +1854,27 @@
         }
 
         async function updateGalleryView() {
-            document.getElementById('loader-overlay').style.display = 'flex';
-            const files = await listDriveFiles();
-            const galleryContainer = document.getElementById('photo-gallery');
-            if (files && files.length > 0) {
-                galleryContainer.innerHTML = files.map(file => `
-                    <div class="photo-item bg-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
-                        <a href="${file.webViewLink}" target="_blank">
-                            <img src="${file.thumbnailLink}" alt="${escapeHtml(file.name)}" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" loading="lazy">
-                        </a>
-                    </div>
-                `).join('');
-            } else {
-                galleryContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No photos found in the community folder.</p>';
+            showBlockingLoader('Loading photos...');
+            try {
+                const files = await listDriveFiles();
+                const galleryContainer = document.getElementById('photo-gallery');
+                if (files && files.length > 0) {
+                    galleryContainer.innerHTML = files.map(file => `
+                        <div class="photo-item bg-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
+                            <a href="${file.webViewLink}" target="_blank">
+                                <img src="${file.thumbnailLink}" alt="${escapeHtml(file.name)}" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" loading="lazy">
+                            </a>
+                        </div>
+                    `).join('');
+                } else {
+                    galleryContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No photos found in the community folder.</p>';
+                }
+            } catch (galleryErr) {
+                console.error('Could not load gallery:', galleryErr);
+                showNotification('Could not load photos from the community folder.', true);
+            } finally {
+                hideBlockingLoader();
             }
-            document.getElementById('loader-overlay').style.display = 'none';
         }
 
         // --- BUILDING SELECTOR & GRID VIEW ---
@@ -2391,16 +2458,22 @@
                 recordedBy: recordedBy
             };
 
-            document.getElementById('loader-overlay').style.display = 'flex';
-            await updateSheetViaBackend(residentData);
+            showBlockingLoader('Saving payment...');
+            try {
+                await updateSheetViaBackend(residentData);
 
-            // Trigger WhatsApp confirmation receipt if payment is marked Paid
-            if (residentData.status === 'Paid') {
-                sendWhatsAppReceipt(fullTimestamp, enteredAmount, finalTotalAmount, isAdditionalPayment);
+                // Trigger WhatsApp confirmation receipt if payment is marked Paid
+                if (residentData.status === 'Paid') {
+                    sendWhatsAppReceipt(fullTimestamp, enteredAmount, finalTotalAmount, isAdditionalPayment);
+                }
+
+                closeResidentModal();
+            } catch (submitErr) {
+                console.error('Could not save the payment:', submitErr);
+                showNotification(submitErr.message || 'Could not save the payment. Please retry.', true);
+            } finally {
+                hideBlockingLoader();
             }
-
-            document.getElementById('loader-overlay').style.display = 'none';
-            closeResidentModal();
         }
 
         function sendWhatsAppReceipt(customTimestamp = null, newAmount = 0, totalAmount = 0, isAdditional = false) {
