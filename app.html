@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Community Hub - Nyati Elan Cultural Forum</title>
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://script.googleusercontent.com">
+    <link rel="dns-prefetch" href="https://script.google.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -258,7 +263,7 @@
                         <i class="fas fa-magnifying-glass text-indigo-600 mr-1"></i> Quick Search Flats & Residents
                     </label>
                     <div class="relative">
-                        <input type="text" id="admin-quick-search" oninput="handleQuickSearch(this.value)"
+                        <input type="text" id="admin-quick-search" oninput="handleQuickSearchDebounced(this.value)"
                             placeholder="Type flat number (e.g. B1-402, 402) or resident name..."
                             class="w-full pl-11 pr-10 py-3.5 bg-white rounded-xl border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-800 text-base shadow-sm">
                         <div
@@ -767,7 +772,7 @@
                                     <span>Society UPI VPA:</span>
                                     <div class="flex items-center gap-1.5">
                                         <span id="qr-upi-label"
-                                            class="font-mono text-gray-900 font-semibold">9595132150@timecosmos</span>
+                                            class="font-mono text-gray-900 font-semibold">nese9595132150@timecosmos</span>
                                         <button type="button" onclick="copyUpiId()"
                                             class="text-indigo-600 hover:text-indigo-800 p-0.5" title="Copy UPI ID">
                                             <i class="fas fa-copy text-xs"></i>
@@ -830,7 +835,7 @@
             // Google Apps Script Web App Deployment URL
             API_URL: 'https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec',
             // Default UPI Configuration for Dynamic QR Generator
-            UPI_ID: '9595132150@timecosmos',
+            UPI_ID: 'nese9595132150@timecosmos',
             UPI_PAYEE_NAME: 'Nyati Elan Cultural Forum',
             // Google Drive Shared Folder ID for Event Photos
             DRIVE_FOLDER_ID: '1-aeIzryYUscbOD9MV1jJOvgieZgh2Rl6',
@@ -839,7 +844,12 @@
             DISCOVERY_DOCS: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
         };
 
-        // --- GLOBAL STATE ---
+        // --- GLOBAL STATE & PERFORMANCE CACHE ---
+        const CACHE_KEY = 'nyati-community-data-v2';
+        let activeFetchPromise = null;
+        let quickSearchTimer = null;
+        let communityRawSummary = [];
+
         let tokenClient;
         let gapiInited = false;
         let gisInited = false;
@@ -854,6 +864,13 @@
         let expenseHeaders = [];
         let isUnpaidFilterActive = false;
         let currentSearchQuery = '';
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[&<>"']/g, function(c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
 
         const BUILDINGS = {
             "B1": { floors: 12, flatsPerFloor: 4 },
@@ -881,9 +898,7 @@
 
         // --- INITIALIZATION & AUTHENTICATION ---
         window.onload = () => {
-            console.log("Window loaded. Initializing dynamic year & auth scripts.");
-            document.getElementById('loader-overlay').style.display = 'flex';
-            document.getElementById('loader-text').innerText = 'Connecting to cloud database...';
+            console.log("Window loaded. Initializing dynamic year, cache & auth scripts.");
 
             // Set dynamic year across UI elements
             const currentYear = new Date().getFullYear();
@@ -896,8 +911,27 @@
                 return;
             }
             switchTab('resident');
-            loadAllDataFromBackend();
 
+            // 1. Instant Render from LocalStorage Cache (Stale-While-Revalidate)
+            let hasCachedData = false;
+            try {
+                const cachedRaw = localStorage.getItem(CACHE_KEY);
+                if (cachedRaw) {
+                    const parsed = JSON.parse(cachedRaw);
+                    if (parsed && parsed.data) {
+                        console.log("Found cached data in localStorage. Instant render (<15ms)!");
+                        processBackendPayload(parsed.data);
+                        hasCachedData = true;
+                    }
+                }
+            } catch (cacheErr) {
+                console.warn("Could not read from localStorage cache:", cacheErr);
+            }
+
+            // 2. Fetch fresh data in background (silent if cached data is already displayed)
+            loadAllDataFromBackend({ silent: hasCachedData });
+
+            // 3. Initialize Google Identity Services in parallel
             const gapiScript = document.createElement('script');
             gapiScript.src = 'https://apis.google.com/js/api.js';
             gapiScript.async = true;
@@ -950,7 +984,7 @@
 
         function maybeEnableButtons() {
             if (gapiInited && gisInited) {
-                document.getElementById('loader-text').innerText = 'Loading community data from Google Sheet...';
+                // GIS buttons ready
             }
         }
 
@@ -959,9 +993,13 @@
             try {
                 loggedInUser = jwt_decode(response.credential);
                 document.getElementById('user-greeting').innerText = `Logged in as: ${loggedInUser.name} (${loggedInUser.email})`;
-                document.getElementById('loader-overlay').style.display = 'flex';
 
-                await loadAllDataFromBackend();
+                // If data is still loading on first-ever load, wait for in-flight fetch; otherwise data is already ready
+                if (allResidents.length === 0 && activeFetchPromise) {
+                    document.getElementById('loader-overlay').style.display = 'flex';
+                    document.getElementById('loader-text').innerText = 'Completing authentication...';
+                    await activeFetchPromise;
+                }
 
                 const adminTab = document.getElementById('admin-tab-btn');
                 const userEmail = (loggedInUser?.email || '').trim().toLowerCase();
@@ -1025,125 +1063,189 @@
             document.getElementById('login-screen').classList.remove('flex');
         }
 
-        // --- BACKEND API LOGIC ---
-        async function loadAllDataFromBackend() {
-            console.log("Attempting to load all data from backend URL:", CONFIG.API_URL);
-            document.getElementById('loader-overlay').style.display = 'flex';
-            document.getElementById('loader-text').innerText = 'Loading community data from Google Sheet...';
-            try {
-                const response = await fetch(`${CONFIG.API_URL}?action=getAllData`);
-                const rawText = await response.text();
+        // --- BACKEND API LOGIC & PROCESSING ---
+        function processBackendPayload(data) {
+            if (!data) return;
 
-                let result;
+            // Process Residents dynamically according to sheet header names
+            const residentValues = data.residents || [];
+            let residentHeaders = [];
+            if (residentValues.length > 0) {
+                residentHeaders = residentValues[0].map(h => String(h).trim().toLowerCase());
+            }
+
+            const colBuilding = residentHeaders.indexOf('building') !== -1 ? residentHeaders.indexOf('building') : 0;
+            const colFlat = residentHeaders.findIndex(h => h.includes('flat')) !== -1 ? residentHeaders.findIndex(h => h.includes('flat')) : 1;
+            const colName = residentHeaders.findIndex(h => h.includes('name') || h.includes('resident')) !== -1 ? residentHeaders.findIndex(h => h.includes('name') || h.includes('resident')) : 2;
+            const colPhone = residentHeaders.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact')) !== -1 ? residentHeaders.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact')) : 3;
+            const colStatus = residentHeaders.indexOf('status') !== -1 ? residentHeaders.indexOf('status') : 4;
+            const colAmount = residentHeaders.indexOf('amount') !== -1 ? residentHeaders.indexOf('amount') : 5;
+            const col2025 = residentHeaders.findIndex(h => h.includes('2025'));
+            const col2024 = residentHeaders.findIndex(h => h.includes('2024'));
+            const colDate = residentHeaders.indexOf('date') !== -1 ? residentHeaders.indexOf('date') : (col2025 !== -1 ? 10 : 6);
+            const colRecordedBy = residentHeaders.findIndex(h => h.includes('volunteer') || h.includes('recorded')) !== -1 ? residentHeaders.findIndex(h => h.includes('volunteer') || h.includes('recorded')) : (col2025 !== -1 ? 11 : 7);
+            const colComments = residentHeaders.findIndex(h => h.includes('comment') || h.includes('note')) !== -1 ? residentHeaders.findIndex(h => h.includes('comment') || h.includes('note')) : (col2025 !== -1 ? 12 : 8);
+            const colPaymentMode = residentHeaders.findIndex(h => h.includes('payment mode') || h.includes('mode') || h.includes('method'));
+
+            allResidents = residentValues.slice(1).map((row, index) => ({
+                building: (row[colBuilding] || '').toString().trim(),
+                flat: (row[colFlat] || '').toString().trim(),
+                name: (row[colName] || '').toString().trim(),
+                phone: (row[colPhone] || '').toString().trim(),
+                status: (row[colStatus] || 'Unpaid').toString().trim(),
+                amount: parseFloat(String(row[colAmount] || '').replace(/[^0-9.-]+/g, "")) || 0,
+                amount2025: col2025 !== -1 ? (row[col2025] || '').toString().trim() : '',
+                amount2024: col2024 !== -1 ? (row[col2024] || '').toString().trim() : '',
+                date: colDate !== -1 ? (row[colDate] || '').toString().trim() : '',
+                recordedBy: colRecordedBy !== -1 ? (row[colRecordedBy] || '').toString().trim() : '',
+                comments: colComments !== -1 ? (row[colComments] || '').toString().trim() : '',
+                paymentMode: colPaymentMode !== -1 ? (row[colPaymentMode] || 'UPI').toString().trim() : 'UPI',
+                rowIndex: index + 2
+            }));
+
+            // Process Expenses
+            const expenseValues = data.expenses || [];
+            expenseHeaders = expenseValues.length > 0 ? expenseValues[0] : [];
+            allExpenses = expenseValues.slice(1).map(row => {
+                let expenseObj = {};
+                expenseHeaders.forEach((header, i) => { expenseObj[header] = row[i]; });
+                expenseObj['Total'] = parseFloat(String(expenseObj['Total']).replace(/[^0-9.-]+/g, "")) || 0;
+                return expenseObj;
+            });
+
+            // Process Events
+            const eventValues = data.events || [];
+            allEvents = eventValues.slice(1).map(row => ({
+                date: row[0],
+                celebration: row[1],
+                day: row[2],
+                name: row[3],
+                description: row[4],
+                time: row[5],
+                location: row[6]
+            }));
+
+            // Process Summary with Intelligent Multi-Format Parser
+            communityRawSummary = data.summary || [];
+            const summaryData = parseSummaryData(communityRawSummary, allResidents, allExpenses);
+
+            // Process Admins
+            adminEmails = (data.admins || []).map(email => email.trim().toLowerCase());
+            adminRegions = data.adminRegions || {};
+
+            populateCommunityData();
+            setupBuildingSelector();
+            updateResidentView(summaryData);
+            setupFilters();
+            updateEventsView();
+
+            // Refresh search results or building grid if active
+            if (currentSearchQuery) {
+                handleQuickSearch(currentSearchQuery);
+            } else if (selectedBuilding) {
+                generateFlatGrid(selectedBuilding);
+            }
+        }
+
+        async function loadAllDataFromBackend(options = {}) {
+            const isSilent = options.silent === true;
+
+            // In-flight request deduplication
+            if (activeFetchPromise) {
+                return activeFetchPromise;
+            }
+
+            if (!isSilent) {
+                document.getElementById('loader-overlay').style.display = 'flex';
+                document.getElementById('loader-text').innerText = 'Loading community data from Google Sheet...';
+            }
+
+            activeFetchPromise = (async () => {
                 try {
-                    result = JSON.parse(rawText);
-                } catch (parseErr) {
-                    console.error("Non-JSON response received from Apps Script:", rawText.substring(0, 300));
-                    throw new Error("Backend returned an HTML/Authorization page instead of JSON. Ensure your Apps Script Web App is deployed with 'Execute as: Me' and 'Who has access: Anyone'.");
+                    console.log("Fetching fresh data from backend URL:", CONFIG.API_URL);
+                    const response = await fetch(`${CONFIG.API_URL}?action=getAllData`, { cache: 'no-cache' });
+                    const rawText = await response.text();
+
+                    let result;
+                    try {
+                        result = JSON.parse(rawText);
+                    } catch (parseErr) {
+                        console.error("Non-JSON response received from Apps Script:", rawText.substring(0, 300));
+                        throw new Error("Backend returned an HTML/Authorization page instead of JSON. Ensure your Apps Script Web App is deployed with 'Execute as: Me' and 'Who has access: Anyone'.");
+                    }
+
+                    if (result.status !== 'success') {
+                        throw new Error(result.message || 'Error returned by Apps Script backend.');
+                    }
+
+                    const data = result.data;
+
+                    // Cache to LocalStorage for instant subsequent loads
+                    try {
+                        localStorage.setItem(CACHE_KEY, JSON.stringify({
+                            timestamp: Date.now(),
+                            data: data
+                        }));
+                    } catch (storageErr) {
+                        console.warn("LocalStorage save warning:", storageErr);
+                    }
+
+                    processBackendPayload(data);
+                    return data;
+                } catch (err) {
+                    console.error('Error loading data from backend:', err);
+                    if (!isSilent) {
+                        const message = err.message || 'Failed to load data from backend.';
+                        showNotification(message, true);
+                    }
+                } finally {
+                    activeFetchPromise = null;
+                    if (!isSilent) {
+                        document.getElementById('loader-overlay').style.display = 'none';
+                    }
                 }
+            })();
 
-                if (result.status !== 'success') {
-                    throw new Error(result.message || 'Error returned by Apps Script backend.');
-                }
+            return activeFetchPromise;
+        }
 
-                const data = result.data;
-                console.log("Backend response received:", data);
-
-                // Process Residents dynamically according to sheet header names
-                const residentValues = data.residents || [];
-                let residentHeaders = [];
-                if (residentValues.length > 0) {
-                    residentHeaders = residentValues[0].map(h => String(h).trim().toLowerCase());
-                }
-
-                const colBuilding = residentHeaders.indexOf('building') !== -1 ? residentHeaders.indexOf('building') : 0;
-                const colFlat = residentHeaders.findIndex(h => h.includes('flat')) !== -1 ? residentHeaders.findIndex(h => h.includes('flat')) : 1;
-                const colName = residentHeaders.findIndex(h => h.includes('name') || h.includes('resident')) !== -1 ? residentHeaders.findIndex(h => h.includes('name') || h.includes('resident')) : 2;
-                const colPhone = residentHeaders.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact')) !== -1 ? residentHeaders.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact')) : 3;
-                const colStatus = residentHeaders.indexOf('status') !== -1 ? residentHeaders.indexOf('status') : 4;
-                const colAmount = residentHeaders.indexOf('amount') !== -1 ? residentHeaders.indexOf('amount') : 5;
-                const col2025 = residentHeaders.findIndex(h => h.includes('2025'));
-                const col2024 = residentHeaders.findIndex(h => h.includes('2024'));
-                const colDate = residentHeaders.indexOf('date') !== -1 ? residentHeaders.indexOf('date') : (col2025 !== -1 ? 10 : 6);
-                const colRecordedBy = residentHeaders.findIndex(h => h.includes('volunteer') || h.includes('recorded')) !== -1 ? residentHeaders.findIndex(h => h.includes('volunteer') || h.includes('recorded')) : (col2025 !== -1 ? 11 : 7);
-                const colComments = residentHeaders.findIndex(h => h.includes('comment') || h.includes('note')) !== -1 ? residentHeaders.findIndex(h => h.includes('comment') || h.includes('note')) : (col2025 !== -1 ? 12 : 8);
-                const colPaymentMode = residentHeaders.findIndex(h => h.includes('payment mode') || h.includes('mode') || h.includes('method'));
-
-                allResidents = residentValues.slice(1).map((row, index) => ({
-                    building: (row[colBuilding] || '').toString().trim(),
-                    flat: (row[colFlat] || '').toString().trim(),
-                    name: (row[colName] || '').toString().trim(),
-                    phone: (row[colPhone] || '').toString().trim(),
-                    status: (row[colStatus] || 'Unpaid').toString().trim(),
-                    amount: parseFloat(String(row[colAmount] || '').replace(/[^0-9.-]+/g, "")) || 0,
-                    amount2025: col2025 !== -1 ? (row[col2025] || '').toString().trim() : '',
-                    amount2024: col2024 !== -1 ? (row[col2024] || '').toString().trim() : '',
-                    date: colDate !== -1 ? (row[colDate] || '').toString().trim() : '',
-                    recordedBy: colRecordedBy !== -1 ? (row[colRecordedBy] || '').toString().trim() : '',
-                    comments: colComments !== -1 ? (row[colComments] || '').toString().trim() : '',
-                    paymentMode: colPaymentMode !== -1 ? (row[colPaymentMode] || 'UPI').toString().trim() : 'UPI',
-                    rowIndex: index + 2
-                }));
-                console.log(`Loaded ${allResidents.length} residents with dynamic headers:`, residentHeaders);
-
-                // Process Expenses
-                const expenseValues = data.expenses || [];
-                expenseHeaders = expenseValues.length > 0 ? expenseValues[0] : [];
-                allExpenses = expenseValues.slice(1).map(row => {
-                    let expenseObj = {};
-                    expenseHeaders.forEach((header, i) => { expenseObj[header] = row[i]; });
-                    expenseObj['Total'] = parseFloat(String(expenseObj['Total']).replace(/[^0-9.-]+/g, "")) || 0;
-                    return expenseObj;
+        async function updateSheetViaBackend(residentData) {
+            try {
+                // Optimistically update in-memory state immediately for instant UI response (0ms)
+                const bld = residentData.building;
+                const flt = residentData.flat;
+                if (!communityData[bld]) communityData[bld] = { residents: {} };
+                const existingRes = communityData[bld].residents[flt] || {};
+                const updatedRes = Object.assign({}, existingRes, {
+                    building: bld,
+                    flat: flt,
+                    name: residentData.name,
+                    phone: residentData.phone,
+                    status: residentData.status,
+                    amount: residentData.amount,
+                    date: residentData.date,
+                    comments: residentData.comments,
+                    recordedBy: residentData.recordedBy,
+                    paymentMode: residentData.paymentMode
                 });
-                console.log(`Loaded ${allExpenses.length} expenses.`);
+                communityData[bld].residents[flt] = updatedRes;
 
-                // Process Events
-                const eventValues = data.events || [];
-                allEvents = eventValues.slice(1).map(row => ({
-                    date: row[0],
-                    celebration: row[1],
-                    day: row[2],
-                    name: row[3],
-                    description: row[4],
-                    time: row[5],
-                    location: row[6]
-                }));
-                console.log(`Loaded ${allEvents.length} events.`);
+                const resIdx = allResidents.findIndex(r => r.building === bld && r.flat === flt);
+                if (resIdx !== -1) {
+                    allResidents[resIdx] = Object.assign({}, allResidents[resIdx], updatedRes);
+                } else {
+                    allResidents.push(updatedRes);
+                }
 
-                // Process Summary with Intelligent Multi-Format Parser
-                const rawSummary = data.summary || [];
-                const summaryData = parseSummaryData(rawSummary, allResidents, allExpenses);
-                console.log("Parsed summary data:", summaryData);
-
-                // Process Admins
-                adminEmails = (data.admins || []).map(email => email.trim().toLowerCase());
-                adminRegions = data.adminRegions || {};
-                console.log(`Loaded ${adminEmails.length} admin emails:`, adminEmails);
-
-                populateCommunityData();
-                setupBuildingSelector();
+                // Recompute and update view immediately
+                const summaryData = parseSummaryData(communityRawSummary, allResidents, allExpenses);
                 updateResidentView(summaryData);
-                setupFilters();
-                updateEventsView();
-
-                // Refresh search results or building grid if active
                 if (currentSearchQuery) {
                     handleQuickSearch(currentSearchQuery);
                 } else if (selectedBuilding) {
                     generateFlatGrid(selectedBuilding);
                 }
 
-            } catch (err) {
-                console.error('Error loading data from backend:', err);
-                const message = err.message || 'Failed to load data from backend.';
-                showNotification(message, true);
-            } finally {
-                document.getElementById('loader-overlay').style.display = 'none';
-            }
-        }
-
-        async function updateSheetViaBackend(residentData) {
-            try {
                 const response = await fetch(CONFIG.API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' }, // Required for Apps Script doPost
@@ -1156,7 +1258,8 @@
                 if (result.status !== 'success') throw new Error(result.message);
 
                 showNotification(result.data || 'Details saved successfully!');
-                await loadAllDataFromBackend(); // Refresh all data
+                // Silent background sync
+                loadAllDataFromBackend({ silent: true });
 
             } catch (err) {
                 console.error('Error saving to sheet via backend:', err);
@@ -1250,7 +1353,7 @@
                 }
                 closeExpenseModal();
                 showNotification(result.data || 'Expense recorded successfully!');
-                await loadAllDataFromBackend();
+                loadAllDataFromBackend({ silent: true });
             } catch (err) {
                 console.error('Error saving expense:', err);
                 showNotification(`Failed to save expense: ${err.message}`, true);
@@ -1529,23 +1632,17 @@
             const uniqueFestivals = categoryHeader
                 ? [...new Set(allExpenses.map(exp => String(exp[categoryHeader] || '').trim()).filter(Boolean))]
                 : [];
-            festivalFilter.innerHTML = '<option value="All">All Festivals</option>';
-            uniqueFestivals.forEach(festival => {
-                festivalFilter.innerHTML += `<option value="${festival}">${festival}</option>`;
-            });
+            festivalFilter.innerHTML = '<option value="All">All Festivals</option>' + 
+                uniqueFestivals.map(festival => `<option value="${escapeHtml(festival)}">${escapeHtml(festival)}</option>`).join('');
 
             const buildingFilter = document.getElementById('building-filter');
-            buildingFilter.innerHTML = '<option value="All">All Buildings</option>';
-            Object.keys(BUILDINGS).forEach(name => {
-                buildingFilter.innerHTML += `<option value="${name}">${name}</option>`;
-            });
+            buildingFilter.innerHTML = '<option value="All">All Buildings</option>' + 
+                Object.keys(BUILDINGS).map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
 
             const eventFestivalFilter = document.getElementById('event-festival-filter');
             const uniqueEventFestivals = [...new Set(allEvents.map(event => event.celebration).filter(Boolean))];
-            eventFestivalFilter.innerHTML = '<option value="All">All Festivals</option>';
-            uniqueEventFestivals.forEach(festival => {
-                eventFestivalFilter.innerHTML += `<option value="${festival}">${festival}</option>`;
-            });
+            eventFestivalFilter.innerHTML = '<option value="All">All Festivals</option>' + 
+                uniqueEventFestivals.map(festival => `<option value="${escapeHtml(festival)}">${escapeHtml(festival)}</option>`).join('');
 
             displayFilteredExpenses();
             displayFilteredCollections();
@@ -1561,26 +1658,26 @@
             const headersToDisplay = expenseHeaders.filter(header => header.toLowerCase().trim() !== 'volunteer name');
             const expenseHeaderRow = document.getElementById('expense-header-row');
             const expenseTableBody = document.getElementById('expense-table-body');
-            expenseHeaderRow.innerHTML = '';
-            expenseTableBody.innerHTML = '';
 
             if (headersToDisplay.length > 0) {
-                headersToDisplay.forEach(header => {
-                    expenseHeaderRow.innerHTML += `<th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">${header}</th>`;
-                });
+                expenseHeaderRow.innerHTML = headersToDisplay.map(header => 
+                    `<th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">${escapeHtml(header)}</th>`
+                ).join('');
+            } else {
+                expenseHeaderRow.innerHTML = '';
             }
+
             if (filteredExpenses.length === 0) {
                 expenseTableBody.innerHTML = `<tr><td colspan="${headersToDisplay.length || 1}" class="text-center py-6 text-gray-500">No expenses recorded for this selection.</td></tr>`;
             } else {
-                filteredExpenses.forEach(exp => {
-                    let rowHtml = '<tr class="hover:bg-gray-50">';
-                    headersToDisplay.forEach(header => {
+                const rowsHtml = filteredExpenses.map(exp => {
+                    const cells = headersToDisplay.map(header => {
                         const isNumeric = header === 'Total' || header === 'Given' || header === 'Pending';
-                        rowHtml += `<td class="py-3 px-4 text-sm ${isNumeric ? 'text-right font-medium' : 'text-left'}">${exp[header] || ''}</td>`;
-                    });
-                    rowHtml += '</tr>';
-                    expenseTableBody.innerHTML += rowHtml;
-                });
+                        return `<td class="py-3 px-4 text-sm ${isNumeric ? 'text-right font-medium' : 'text-left'}">${escapeHtml(String(exp[header] || ''))}</td>`;
+                    }).join('');
+                    return `<tr class="hover:bg-gray-50">${cells}</tr>`;
+                }).join('');
+                expenseTableBody.innerHTML = rowsHtml;
             }
         }
 
@@ -1601,33 +1698,34 @@
             const filteredResidents = selectedBuilding === 'All' ? allResidents : allResidents.filter(res => res.building === selectedBuilding);
             const collectionTableBody = document.getElementById('collection-table-body');
             const collectionTableFooter = document.getElementById('collection-table-footer');
-            collectionTableBody.innerHTML = '';
-            collectionTableFooter.innerHTML = '';
 
             if (filteredResidents.length === 0) {
                 collectionTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-500">No collection data for this selection.</td></tr>`;
+                collectionTableFooter.innerHTML = '';
             } else {
                 let totalCollected = 0;
                 let paidCount = 0;
                 let unpaidCount = 0;
-                filteredResidents.forEach(res => {
+                const rowsHtml = filteredResidents.map(res => {
                     const amount = res.amount > 0 ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(res.amount) : '-';
-                    collectionTableBody.innerHTML += `
-                        <tr class="hover:bg-gray-50">
-                            <td class="py-3 px-4 text-sm font-semibold text-gray-900">${res.building}-${res.flat}</td>
-                            <td class="py-3 px-4 text-sm text-gray-700">${res.name || '<span class="text-gray-400">Unassigned</span>'}</td>
-                            <td class="py-3 px-4 text-sm text-gray-600">${res.status === 'Paid' ? (res.paymentMode || 'UPI') : '-'}</td>
-                            <td class="py-3 px-4 text-sm"><span class="px-2.5 py-1 text-xs font-semibold rounded-full ${res.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${res.status}</span></td>
-                            <td class="py-3 px-4 text-sm font-semibold text-right">${amount}</td>
-                        </tr>
-                    `;
                     if (res.status === 'Paid') {
                         totalCollected += res.amount;
                         paidCount++;
                     } else {
                         unpaidCount++;
                     }
-                });
+                    return `
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-3 px-4 text-sm font-semibold text-gray-900">${escapeHtml(res.building)}-${escapeHtml(res.flat)}</td>
+                            <td class="py-3 px-4 text-sm text-gray-700">${res.name ? escapeHtml(res.name) : '<span class="text-gray-400">Unassigned</span>'}</td>
+                            <td class="py-3 px-4 text-sm text-gray-600">${res.status === 'Paid' ? escapeHtml(res.paymentMode || 'UPI') : '-'}</td>
+                            <td class="py-3 px-4 text-sm"><span class="px-2.5 py-1 text-xs font-semibold rounded-full ${res.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${escapeHtml(res.status)}</span></td>
+                            <td class="py-3 px-4 text-sm font-semibold text-right">${amount}</td>
+                        </tr>
+                    `;
+                }).join('');
+                collectionTableBody.innerHTML = rowsHtml;
+
                 collectionTableFooter.innerHTML = `
                     <tr>
                         <td class="py-3 px-4 text-left" colspan="3">
@@ -1644,7 +1742,6 @@
         function updateEventsView() {
             const eventsContainer = document.getElementById('events-container');
             const selectedFestival = document.getElementById('event-festival-filter')?.value || 'All';
-            eventsContainer.innerHTML = '';
             const filteredEvents = selectedFestival === 'All' ? allEvents : allEvents.filter(event => event.celebration === selectedFestival);
             if (filteredEvents.length === 0) {
                 eventsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No events scheduled for this selection.</p>';
@@ -1659,29 +1756,29 @@
                 return acc;
             }, {});
 
-            for (const key in groupedEvents) {
+            const cardsHtml = Object.keys(groupedEvents).map(key => {
                 const group = groupedEvents[key];
                 const eventsListHtml = group.events.map(event => `
                     <li class="flex items-center justify-between py-2.5">
                         <div class="flex items-center gap-3">
                             <i class="fas fa-clock text-indigo-500"></i>
-                            <span class="font-semibold text-gray-800 text-sm md:text-base">${event.name}</span>
+                            <span class="font-semibold text-gray-800 text-sm md:text-base">${escapeHtml(event.name)}</span>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm text-gray-700 font-medium">${event.time}</p>
-                            <p class="text-xs text-gray-500">${event.location}</p>
+                            <p class="text-sm text-gray-700 font-medium">${escapeHtml(event.time)}</p>
+                            <p class="text-xs text-gray-500">${escapeHtml(event.location)}</p>
                         </div>
                     </li>
                 `).join('');
 
-                const eventCard = `
+                return `
                     <div class="event-card bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
                         <div class="p-5">
                             <div class="flex items-center justify-between mb-3">
-                                <p class="text-xs md:text-sm font-semibold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">${group.celebration || 'Event'}</p>
-                                <p class="text-xs md:text-sm text-gray-600 font-medium">${group.date || ''} ${group.day ? `(${group.day})` : ''}</p>
+                                <p class="text-xs md:text-sm font-semibold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">${escapeHtml(group.celebration || 'Event')}</p>
+                                <p class="text-xs md:text-sm text-gray-600 font-medium">${escapeHtml(group.date || '')} ${group.day ? `(${escapeHtml(group.day)})` : ''}</p>
                             </div>
-                            <p class="text-gray-600 text-sm mb-2">${group.description}</p>
+                            <p class="text-gray-600 text-sm mb-2">${escapeHtml(group.description || '')}</p>
                         </div>
                         <div class="bg-gray-50 px-5 py-3 border-t">
                             <ul class="divide-y divide-gray-200">
@@ -1690,20 +1787,23 @@
                         </div>
                     </div>
                 `;
-                eventsContainer.innerHTML += eventCard;
-            }
+            }).join('');
+
+            eventsContainer.innerHTML = cardsHtml;
         }
 
         async function updateGalleryView() {
             document.getElementById('loader-overlay').style.display = 'flex';
             const files = await listDriveFiles();
             const galleryContainer = document.getElementById('photo-gallery');
-            galleryContainer.innerHTML = '';
             if (files && files.length > 0) {
-                files.forEach(file => {
-                    const photoElement = `<div class="photo-item bg-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition"><a href="${file.webViewLink}" target="_blank"><img src="${file.thumbnailLink}" alt="${file.name}" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" loading="lazy"></a></div>`;
-                    galleryContainer.innerHTML += photoElement;
-                });
+                galleryContainer.innerHTML = files.map(file => `
+                    <div class="photo-item bg-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
+                        <a href="${file.webViewLink}" target="_blank">
+                            <img src="${file.thumbnailLink}" alt="${escapeHtml(file.name)}" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" loading="lazy">
+                        </a>
+                    </div>
+                `).join('');
             } else {
                 galleryContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No photos found in the community folder.</p>';
             }
@@ -1799,10 +1899,7 @@
             heading.innerText = `Select a Flat in ${buildingName} ${isUnpaidFilterActive ? '(Filtered: Unpaid Only)' : ''}`;
             container.innerHTML = '';
 
-            const grid = document.createElement('div');
-            grid.className = 'flat-grid';
-            grid.style.gridTemplateColumns = `repeat(${buildingLayout.flatsPerFloor}, minmax(0, 1fr))`;
-
+            const buttonsHtml = [];
             let visibleCount = 0;
 
             for (let floor = 1; floor <= buildingLayout.floors; floor++) {
@@ -1821,22 +1918,21 @@
                     }
 
                     visibleCount++;
-                    const btn = document.createElement('button');
-                    btn.className = `flat-btn ${statusClass} p-3.5 rounded-xl text-left shadow-sm`;
-
-                    const residentNameText = resident?.name ? `<span class="block text-xs font-normal opacity-85 truncate mt-0.5">${resident.name}</span>` : '';
+                    const residentNameText = resident?.name ? `<span class="block text-xs font-normal opacity-85 truncate mt-0.5">${escapeHtml(resident.name)}</span>` : '';
                     const prev2025Tag = (resident?.amount2025 && resident.amount2025 !== '?' && resident.amount2025 !== '0' && resident.amount2025 !== '₹0')
-                        ? `<span class="inline-block mt-1 text-[10px] font-medium bg-black/5 px-1.5 py-0.5 rounded text-gray-700">2025: ${resident.amount2025}</span>`
+                        ? `<span class="inline-block mt-1 text-[10px] font-medium bg-black/5 px-1.5 py-0.5 rounded text-gray-700">2025: ${escapeHtml(resident.amount2025)}</span>`
                         : '';
 
-                    btn.innerHTML = `
-                        <span class="font-bold text-base md:text-lg block">${buildingName}-${flatNumber}</span>
-                        ${residentNameText}
-                        ${prev2025Tag}
-                        <div class="status-dot"></div>
-                    `;
-                    btn.onclick = () => openResidentModal(buildingName, flatNumber);
-                    grid.appendChild(btn);
+                    buttonsHtml.push(`
+                        <button class="flat-btn ${statusClass} p-3.5 rounded-xl text-left shadow-sm"
+                                data-building="${escapeHtml(buildingName)}"
+                                data-flat="${escapeHtml(flatNumber)}">
+                            <span class="font-bold text-base md:text-lg block">${escapeHtml(buildingName)}-${escapeHtml(flatNumber)}</span>
+                            ${residentNameText}
+                            ${prev2025Tag}
+                            <div class="status-dot"></div>
+                        </button>
+                    `);
                 }
             }
 
@@ -1849,11 +1945,30 @@
                     </div>
                 `;
             } else {
+                const grid = document.createElement('div');
+                grid.className = 'flat-grid';
+                grid.style.gridTemplateColumns = `repeat(${buildingLayout.flatsPerFloor}, minmax(0, 1fr))`;
+                grid.innerHTML = buttonsHtml.join('');
+                grid.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.flat-btn');
+                    if (btn) {
+                        const bld = btn.getAttribute('data-building');
+                        const flt = btn.getAttribute('data-flat');
+                        if (bld && flt) openResidentModal(bld, flt);
+                    }
+                });
                 container.appendChild(grid);
             }
         }
 
-        // --- REAL-TIME QUICK SEARCH LOGIC ---
+        // --- REAL-TIME QUICK SEARCH LOGIC (Debounced & Batched) ---
+        function handleQuickSearchDebounced(query) {
+            if (quickSearchTimer) clearTimeout(quickSearchTimer);
+            quickSearchTimer = setTimeout(() => {
+                handleQuickSearch(query);
+            }, 150);
+        }
+
         function handleQuickSearch(query) {
             currentSearchQuery = (query || '').trim();
             const clearBtn = document.getElementById('clear-search-btn');
@@ -1876,7 +1991,7 @@
             const normalizedQuery = currentSearchQuery.toLowerCase().replace(/[\s-]/g, '');
             const matchingFlats = [];
 
-            // Search through all possible building flats
+            // Search through all accessible building flats
             getAccessibleBuildings().forEach(bName => {
                 const bLayout = BUILDINGS[bName];
                 for (let floor = 1; floor <= bLayout.floors; floor++) {
@@ -1912,7 +2027,6 @@
             });
 
             searchCount.innerText = `${matchingFlats.length} found`;
-            searchGrid.innerHTML = '';
 
             if (matchingFlats.length === 0) {
                 searchGrid.innerHTML = `
@@ -1925,7 +2039,7 @@
                 return;
             }
 
-            matchingFlats.forEach(item => {
+            const cardsHtml = matchingFlats.map(item => {
                 const res = item.resident;
                 const statusClass = item.status.toLowerCase();
                 let statusBadge = '';
@@ -1939,31 +2053,32 @@
                 }
 
                 const amountText = res?.amount ? `₹${res.amount.toLocaleString('en-IN')}` : '-';
-                const paymentModeTag = (res?.status === 'Paid' && res?.paymentMode) ? `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">${res.paymentMode}</span>` : '';
+                const paymentModeTag = (res?.status === 'Paid' && res?.paymentMode) ? `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">${escapeHtml(res.paymentMode)}</span>` : '';
                 const prev2025Badge = (res?.amount2025 && res.amount2025 !== '?' && res.amount2025 !== '0' && res.amount2025 !== '₹0')
-                    ? `<span class="text-[11px] font-medium text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">2025: ${res.amount2025}</span>`
+                    ? `<span class="text-[11px] font-medium text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">2025: ${escapeHtml(res.amount2025)}</span>`
                     : '';
 
-                const card = document.createElement('div');
-                card.className = 'bg-white border border-gray-200 hover:border-indigo-400 hover:shadow-md rounded-xl p-4 cursor-pointer transition-all flex flex-col justify-between';
-                card.onclick = () => openResidentModal(item.building, item.flat);
-                card.innerHTML = `
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-bold text-lg text-gray-900">${item.building}-${item.flat}</span>
-                            ${statusBadge}
+                return `
+                    <div class="bg-white border border-gray-200 hover:border-indigo-400 hover:shadow-md rounded-xl p-4 cursor-pointer transition-all flex flex-col justify-between"
+                         onclick="openResidentModal('${escapeHtml(item.building)}', '${escapeHtml(item.flat)}')">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-lg text-gray-900">${escapeHtml(item.building)}-${escapeHtml(item.flat)}</span>
+                                ${statusBadge}
+                            </div>
+                            <p class="text-sm font-medium text-gray-800 truncate">${res?.name ? escapeHtml(res.name) : '<span class="text-gray-400 font-normal">Unassigned</span>'}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">${res?.phone ? escapeHtml(res.phone) : 'No phone'}</p>
+                            ${prev2025Badge ? `<div class="mt-2">${prev2025Badge}</div>` : ''}
                         </div>
-                        <p class="text-sm font-medium text-gray-800 truncate">${res?.name || '<span class="text-gray-400 font-normal">Unassigned</span>'}</p>
-                        <p class="text-xs text-gray-500 mt-0.5">${res?.phone || 'No phone'}</p>
-                        ${prev2025Badge ? `<div class="mt-2">${prev2025Badge}</div>` : ''}
-                    </div>
-                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs">
-                        <span class="font-semibold text-gray-700">${amountText}</span>
-                        ${paymentModeTag}
+                        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs">
+                            <span class="font-semibold text-gray-700">${amountText}</span>
+                            ${paymentModeTag}
+                        </div>
                     </div>
                 `;
-                searchGrid.appendChild(card);
-            });
+            }).join('');
+
+            searchGrid.innerHTML = cardsHtml;
         }
 
         function clearQuickSearch() {
@@ -2082,7 +2197,7 @@
 
             if (!setQrAvailability(building)) return;
 
-            const upiId = CONFIG.UPI_ID || '9595132150@timecosmos';
+            const upiId = CONFIG.UPI_ID || 'nese9595132150@timecosmos';
             const payeeName = CONFIG.UPI_PAYEE_NAME || 'Nyati Elan Cultural Forum';
             const note = `Flat ${building}-${flat} 2026 Collection`;
 
@@ -2103,7 +2218,7 @@
         }
 
         function copyUpiId() {
-            const upiId = CONFIG.UPI_ID || '9595132150@timecosmos';
+            const upiId = CONFIG.UPI_ID || 'nese9595132150@timecosmos';
             navigator.clipboard.writeText(upiId).then(() => {
                 showNotification(`Copied UPI ID: ${upiId}`);
             }).catch(() => {
