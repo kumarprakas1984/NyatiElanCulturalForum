@@ -482,44 +482,76 @@
 
                     <!-- Festival Expenses Subview -->
                     <div id="festival-expense-view">
-                        <div class="mb-4">
-                            <label for="festival-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by
-                                Festival</label>
-                            <select id="festival-filter" onchange="displayFilteredExpenses()"
-                                class="w-full md:w-1/3 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base bg-white"></select>
+                        <!-- Level 1: one tile per festival -->
+                        <div id="festival-tiles-level">
+                            <div id="festival-tiles-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
                         </div>
-                        <div class="overflow-x-auto rounded-xl border border-gray-200">
-                            <table class="min-w-full bg-white divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr id="expense-header-row"></tr>
-                                </thead>
-                                <tbody id="expense-table-body" class="divide-y divide-gray-200"></tbody>
-                            </table>
+                        <!-- Level 2: expense detail table for the selected festival -->
+                        <div id="festival-detail-level" class="hidden">
+                            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                <button type="button" onclick="showFestivalTiles()"
+                                    class="text-sm font-semibold text-indigo-600 hover:underline flex items-center gap-1.5">
+                                    <i class="fas fa-arrow-left"></i> Back to festivals
+                                </button>
+                                <div class="text-right">
+                                    <p id="festival-detail-label" class="text-xs font-semibold text-indigo-600 uppercase tracking-wide"></p>
+                                    <p id="festival-detail-total" class="text-xl font-bold text-gray-900"></p>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto rounded-xl border border-gray-200">
+                                <table class="min-w-full bg-white divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr id="expense-header-row"></tr>
+                                    </thead>
+                                    <tbody id="expense-table-body" class="divide-y divide-gray-200"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Building Collections Subview -->
                     <div id="building-collection-view" class="hidden">
-                        <div class="mb-4">
-                            <label for="building-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by
-                                Building</label>
-                            <select id="building-filter" onchange="displayFilteredCollections()"
-                                class="w-full md:w-1/3 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base bg-white"></select>
+                        <!-- Level 1: one tile per building -->
+                        <div id="building-tiles-level">
+                            <div class="flex flex-wrap items-center gap-2 mb-4">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EAF5EF] text-[#256648] text-sm font-semibold">
+                                    <span class="w-2 h-2 rounded-full bg-[#2F7A5C]"></span> Paid Flats: <span id="overall-paid-count">0</span>
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FBEDCB] text-[#8A5A0B] text-sm font-semibold">
+                                    <span class="w-2 h-2 rounded-full bg-[#D98E04]"></span> Unpaid Flats: <span id="overall-unpaid-count">0</span>
+                                </span>
+                            </div>
+                            <div id="building-tiles-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
                         </div>
-                        <div class="overflow-x-auto rounded-xl border border-gray-200">
-                            <table class="min-w-full bg-white divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Flat</th>
-                                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Name</th>
-                                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Mode</th>
-                                        <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Status</th>
-                                        <th class="py-3 px-4 text-right text-sm font-semibold text-gray-600">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="collection-table-body" class="divide-y divide-gray-200"></tbody>
-                                <tfoot id="collection-table-footer" class="bg-gray-50 font-semibold"></tfoot>
-                            </table>
+                        <!-- Level 2: one tile per flat in the selected building -->
+                        <div id="flat-tiles-level" class="hidden">
+                            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                <button type="button" onclick="showBuildingTiles()"
+                                    class="text-sm font-semibold text-indigo-600 hover:underline flex items-center gap-1.5">
+                                    <i class="fas fa-arrow-left"></i> Back to buildings
+                                </button>
+                                <div class="text-right">
+                                    <p id="building-detail-label" class="text-xs font-semibold text-indigo-600 uppercase tracking-wide"></p>
+                                    <p id="building-detail-total" class="text-xl font-bold text-gray-900"></p>
+                                    <div class="flex items-center gap-2 mt-1 justify-end">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EAF5EF] text-[#256648] text-xs font-semibold">Paid <span id="building-detail-paid">0</span></span>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FBEDCB] text-[#8A5A0B] text-xs font-semibold">Unpaid <span id="building-detail-unpaid">0</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 text-xs text-gray-600 mb-3">
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-[#2F7A5C]"></span> Paid</span>
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-[#D98E04]"></span> Unpaid</span>
+                            </div>
+                            <div id="flat-tiles-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5"></div>
+                        </div>
+                        <!-- Level 3: detail for the selected flat -->
+                        <div id="flat-detail-level" class="hidden">
+                            <button type="button" onclick="backToFlatTiles()"
+                                class="text-sm font-semibold text-indigo-600 hover:underline flex items-center gap-1.5 mb-4">
+                                <i class="fas fa-arrow-left"></i> Back to flats
+                            </button>
+                            <div id="flat-detail-content" class="bg-gray-50 border border-gray-200 rounded-xl p-5 max-w-md"></div>
                         </div>
                     </div>
                 </div>
@@ -1738,59 +1770,113 @@
             document.getElementById('final-balance').innerText = summaryData.balance || '₹0';
         }
 
+        let selectedFestivalName = null;
+        let selectedBuildingName = null;
+        let currentBuildingResidents = [];
+
         function setupFilters() {
-            const festivalFilter = document.getElementById('festival-filter');
-            const categoryHeader = getExpenseCategoryHeader();
-            const uniqueFestivals = categoryHeader
-                ? [...new Set(allExpenses.map(exp => String(exp[categoryHeader] || '').trim()).filter(Boolean))]
-                : [];
-            festivalFilter.innerHTML = '<option value="All">All Festivals</option>' + 
-                uniqueFestivals.map(festival => `<option value="${escapeHtml(festival)}">${escapeHtml(festival)}</option>`).join('');
-
-            const buildingFilter = document.getElementById('building-filter');
-            buildingFilter.innerHTML = '<option value="All">All Buildings</option>' + 
-                Object.keys(BUILDINGS).map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
-
             const eventFestivalFilter = document.getElementById('event-festival-filter');
             const uniqueEventFestivals = [...new Set(allEvents.map(event => event.celebration).filter(Boolean))];
             eventFestivalFilter.innerHTML = '<option value="All">All Festivals</option>' + 
                 uniqueEventFestivals.map(festival => `<option value="${escapeHtml(festival)}">${escapeHtml(festival)}</option>`).join('');
 
-            displayFilteredExpenses();
-            displayFilteredCollections();
+            renderFestivalTiles();
+            renderBuildingTiles();
+
+            // If a drill-down was already open, refresh it in place with the new data
+            // instead of yanking the user back to the top level on a background sync.
+            if (selectedFestivalName && !document.getElementById('festival-detail-level').classList.contains('hidden')) {
+                openFestivalDetail(selectedFestivalName);
+            }
+            if (selectedBuildingName && !document.getElementById('flat-tiles-level').classList.contains('hidden')) {
+                openBuildingFlats(selectedBuildingName);
+            }
+
             updateEventsView();
         }
 
-        function displayFilteredExpenses() {
-            const selectedFestival = document.getElementById('festival-filter').value;
+        function formatInr(amount) {
+            return `₹${Math.round(amount || 0).toLocaleString('en-IN')}`;
+        }
+
+        // --- Festival Expenses: tile grid (Level 1) -> detail table (Level 2) ---
+
+        function renderFestivalTiles() {
+            const grid = document.getElementById('festival-tiles-grid');
             const categoryHeader = getExpenseCategoryHeader();
-            const filteredExpenses = selectedFestival === 'All' || !categoryHeader
-                ? allExpenses
-                : allExpenses.filter(exp => String(exp[categoryHeader] || '').trim() === selectedFestival);
+            let groups;
+
+            if (categoryHeader) {
+                const map = new Map();
+                allExpenses.forEach(exp => {
+                    const key = String(exp[categoryHeader] || '').trim() || 'Uncategorized';
+                    if (!map.has(key)) map.set(key, { total: 0, count: 0 });
+                    const g = map.get(key);
+                    g.total += (parseFloat(exp['Total']) || 0);
+                    g.count += 1;
+                });
+                groups = [...map.entries()].map(([name, g]) => ({ name, total: g.total, count: g.count }));
+            } else {
+                groups = [{ name: 'All Expenses', total: allExpenses.reduce((a, e) => a + (parseFloat(e['Total']) || 0), 0), count: allExpenses.length }];
+            }
+
+            if (allExpenses.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">No expenses recorded yet.</p>`;
+                return;
+            }
+
+            grid.innerHTML = groups.map(g => `
+                <button type="button" data-festival="${escapeHtml(g.name)}"
+                    class="festival-tile text-left bg-white border border-indigo-100 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+                    <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wide truncate">${escapeHtml(g.name)}</p>
+                    <p class="text-xl font-bold text-gray-900 mt-2">${formatInr(g.total)}</p>
+                    <p class="text-xs text-gray-500 mt-1">${g.count} ${g.count === 1 ? 'entry' : 'entries'}</p>
+                </button>
+            `).join('');
+
+            grid.querySelectorAll('.festival-tile').forEach(btn => {
+                btn.addEventListener('click', () => openFestivalDetail(btn.dataset.festival));
+            });
+        }
+
+        function openFestivalDetail(festivalName) {
+            selectedFestivalName = festivalName;
+            document.getElementById('festival-tiles-level').classList.add('hidden');
+            document.getElementById('festival-detail-level').classList.remove('hidden');
+            document.getElementById('festival-detail-label').textContent = festivalName;
+
+            const categoryHeader = getExpenseCategoryHeader();
+            const filteredExpenses = categoryHeader
+                ? allExpenses.filter(exp => (String(exp[categoryHeader] || '').trim() || 'Uncategorized') === festivalName)
+                : allExpenses;
+
+            document.getElementById('festival-detail-total').textContent = formatInr(filteredExpenses.reduce((a, e) => a + (parseFloat(e['Total']) || 0), 0));
+
             const headersToDisplay = expenseHeaders.filter(header => header.toLowerCase().trim() !== 'volunteer name');
             const expenseHeaderRow = document.getElementById('expense-header-row');
             const expenseTableBody = document.getElementById('expense-table-body');
 
-            if (headersToDisplay.length > 0) {
-                expenseHeaderRow.innerHTML = headersToDisplay.map(header => 
-                    `<th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">${escapeHtml(header)}</th>`
-                ).join('');
-            } else {
-                expenseHeaderRow.innerHTML = '';
-            }
+            expenseHeaderRow.innerHTML = headersToDisplay.length > 0
+                ? headersToDisplay.map(header => `<th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">${escapeHtml(header)}</th>`).join('')
+                : '';
 
             if (filteredExpenses.length === 0) {
                 expenseTableBody.innerHTML = `<tr><td colspan="${headersToDisplay.length || 1}" class="text-center py-6 text-gray-500">No expenses recorded for this selection.</td></tr>`;
             } else {
-                const rowsHtml = filteredExpenses.map(exp => {
+                expenseTableBody.innerHTML = filteredExpenses.map(exp => {
                     const cells = headersToDisplay.map(header => {
                         const isNumeric = header === 'Total' || header === 'Given' || header === 'Pending';
                         return `<td class="py-3 px-4 text-sm ${isNumeric ? 'text-right font-medium' : 'text-left'}">${escapeHtml(String(exp[header] || ''))}</td>`;
                     }).join('');
                     return `<tr class="hover:bg-gray-50">${cells}</tr>`;
                 }).join('');
-                expenseTableBody.innerHTML = rowsHtml;
             }
+        }
+
+        function showFestivalTiles() {
+            selectedFestivalName = null;
+            document.getElementById('festival-detail-level').classList.add('hidden');
+            document.getElementById('festival-tiles-level').classList.remove('hidden');
         }
 
         function normalizeExpenseHeader(header) {
@@ -1805,50 +1891,124 @@
             }) || null;
         }
 
-        function displayFilteredCollections() {
-            const selectedBuilding = document.getElementById('building-filter').value;
-            const filteredResidents = selectedBuilding === 'All' ? allResidents : allResidents.filter(res => res.building === selectedBuilding);
-            const collectionTableBody = document.getElementById('collection-table-body');
-            const collectionTableFooter = document.getElementById('collection-table-footer');
+        // --- Building Collections: tile grid (Level 1) -> flat tiles (Level 2) -> flat detail (Level 3) ---
 
-            if (filteredResidents.length === 0) {
-                collectionTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-500">No collection data for this selection.</td></tr>`;
-                collectionTableFooter.innerHTML = '';
-            } else {
-                let totalCollected = 0;
-                let paidCount = 0;
-                let unpaidCount = 0;
-                const rowsHtml = filteredResidents.map(res => {
-                    const amount = res.amount > 0 ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(res.amount) : '-';
-                    if (res.status === 'Paid') {
-                        totalCollected += res.amount;
-                        paidCount++;
-                    } else {
-                        unpaidCount++;
-                    }
-                    return `
-                        <tr class="hover:bg-gray-50">
-                            <td class="py-3 px-4 text-sm font-semibold text-gray-900">${escapeHtml(res.building)}-${escapeHtml(res.flat)}</td>
-                            <td class="py-3 px-4 text-sm text-gray-700">${res.name ? escapeHtml(res.name) : '<span class="text-gray-400">Unassigned</span>'}</td>
-                            <td class="py-3 px-4 text-sm text-gray-600">${res.status === 'Paid' ? escapeHtml(res.paymentMode || 'UPI') : '-'}</td>
-                            <td class="py-3 px-4 text-sm"><span class="px-2.5 py-1 text-xs font-semibold rounded-full ${res.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${escapeHtml(res.status)}</span></td>
-                            <td class="py-3 px-4 text-sm font-semibold text-right">${amount}</td>
-                        </tr>
-                    `;
-                }).join('');
-                collectionTableBody.innerHTML = rowsHtml;
+        function renderBuildingTiles() {
+            const grid = document.getElementById('building-tiles-grid');
+            const tiles = Object.keys(BUILDINGS).map(name => {
+                const residentsInBuilding = allResidents.filter(r => r.building === name);
+                const total = residentsInBuilding.reduce((a, r) => a + (r.status === 'Paid' ? r.amount : 0), 0);
+                const paidCount = residentsInBuilding.filter(r => r.status === 'Paid').length;
+                return { name, total, paidCount, recordedCount: residentsInBuilding.length };
+            });
 
-                collectionTableFooter.innerHTML = `
-                    <tr>
-                        <td class="py-3 px-4 text-left" colspan="3">
-                            <span class="mr-4 text-sm">Paid: <span class="text-green-600 font-bold">${paidCount}</span></span>
-                            <span class="text-sm">Unpaid: <span class="text-yellow-600 font-bold">${unpaidCount}</span></span>
-                        </td>
-                        <td class="py-3 px-4 text-right text-sm">Total Collected:</td>
-                        <td class="py-3 px-4 text-right text-sm text-indigo-700 font-bold">${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(totalCollected)}</td>
-                    </tr>
-                `;
+            const overallPaidCount = allResidents.filter(r => r.status === 'Paid').length;
+            const overallUnpaidCount = allResidents.filter(r => r.status !== 'Paid').length;
+            document.getElementById('overall-paid-count').textContent = overallPaidCount;
+            document.getElementById('overall-unpaid-count').textContent = overallUnpaidCount;
+
+            grid.innerHTML = tiles.map(t => `
+                <button type="button" data-building="${escapeHtml(t.name)}"
+                    class="building-tile text-left bg-white border border-indigo-100 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+                    <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wide">${escapeHtml(t.name)}</p>
+                    <p class="text-xl font-bold text-gray-900 mt-2">${formatInr(t.total)}</p>
+                    <p class="text-xs text-gray-500 mt-1">${t.paidCount}/${t.recordedCount} paid</p>
+                </button>
+            `).join('');
+
+            grid.querySelectorAll('.building-tile').forEach(btn => {
+                btn.addEventListener('click', () => openBuildingFlats(btn.dataset.building));
+            });
+        }
+
+        function openBuildingFlats(buildingName) {
+            selectedBuildingName = buildingName;
+            document.getElementById('building-tiles-level').classList.add('hidden');
+            document.getElementById('flat-detail-level').classList.add('hidden');
+            document.getElementById('flat-tiles-level').classList.remove('hidden');
+            document.getElementById('building-detail-label').textContent = buildingName;
+
+            currentBuildingResidents = allResidents
+                .filter(r => r.building === buildingName)
+                .sort((a, b) => a.flat.localeCompare(b.flat, undefined, { numeric: true }));
+
+            const total = currentBuildingResidents.reduce((a, r) => a + (r.status === 'Paid' ? r.amount : 0), 0);
+            document.getElementById('building-detail-total').textContent = formatInr(total);
+            document.getElementById('building-detail-paid').textContent = currentBuildingResidents.filter(r => r.status === 'Paid').length;
+            document.getElementById('building-detail-unpaid').textContent = currentBuildingResidents.filter(r => r.status !== 'Paid').length;
+
+            const flatGrid = document.getElementById('flat-tiles-grid');
+            if (currentBuildingResidents.length === 0) {
+                flatGrid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">No collection records for this building yet.</p>`;
+                return;
             }
+
+            flatGrid.innerHTML = currentBuildingResidents.map((r, idx) => {
+                const isPaid = r.status === 'Paid';
+                return `
+                    <button type="button" data-flat-idx="${idx}"
+                        class="collection-flat-tile text-center rounded-xl px-2 py-3 font-semibold text-sm transition-all hover:-translate-y-0.5 ${isPaid ? 'bg-[#2F7A5C] text-white hover:bg-[#256648]' : 'bg-[#FBEDCB] text-[#8A5A0B] hover:bg-[#F6DFA3]'}">
+                        <span class="block">${escapeHtml(r.flat)}</span>
+                        <span class="block text-xs font-medium mt-1 ${isPaid ? 'text-white/85' : 'text-[#8A5A0B]/80'}">${r.amount > 0 ? formatInr(r.amount) : '—'}</span>
+                    </button>
+                `;
+            }).join('');
+
+            flatGrid.querySelectorAll('.collection-flat-tile').forEach(btn => {
+                btn.addEventListener('click', () => openFlatDetail(parseInt(btn.dataset.flatIdx, 10)));
+            });
+        }
+
+        function showBuildingTiles() {
+            selectedBuildingName = null;
+            document.getElementById('flat-tiles-level').classList.add('hidden');
+            document.getElementById('flat-detail-level').classList.add('hidden');
+            document.getElementById('building-tiles-level').classList.remove('hidden');
+        }
+
+        function openFlatDetail(idx) {
+            const r = currentBuildingResidents[idx];
+            if (!r) return;
+            document.getElementById('flat-tiles-level').classList.add('hidden');
+            document.getElementById('flat-detail-level').classList.remove('hidden');
+
+            const isPaid = r.status === 'Paid';
+            document.getElementById('flat-detail-content').innerHTML = `
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">${escapeHtml(r.building)}-${escapeHtml(r.flat)}</h3>
+                    <span class="px-3 py-1 text-xs font-semibold rounded-full ${isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${escapeHtml(r.status)}</span>
+                </div>
+                <dl class="space-y-3 text-sm">
+                    <div class="flex justify-between border-b border-gray-200 pb-2">
+                        <dt class="text-gray-500">Resident</dt>
+                        <dd class="font-medium text-gray-800">${r.name ? escapeHtml(r.name) : 'Unassigned'}</dd>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-200 pb-2">
+                        <dt class="text-gray-500">Amount</dt>
+                        <dd class="font-semibold text-gray-900">${r.amount > 0 ? formatInr(r.amount) : '—'}</dd>
+                    </div>
+                    ${isPaid ? `
+                    <div class="flex justify-between border-b border-gray-200 pb-2">
+                        <dt class="text-gray-500">Payment Mode</dt>
+                        <dd class="font-medium text-gray-800">${escapeHtml(r.paymentMode || 'UPI')}</dd>
+                    </div>` : ''}
+                    ${r.date ? `
+                    <div class="flex justify-between border-b border-gray-200 pb-2">
+                        <dt class="text-gray-500">Date</dt>
+                        <dd class="font-medium text-gray-800">${escapeHtml(r.date)}</dd>
+                    </div>` : ''}
+                    ${r.comments ? `
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-gray-500 shrink-0">Note</dt>
+                        <dd class="font-medium text-gray-800 text-right">${escapeHtml(r.comments)}</dd>
+                    </div>` : ''}
+                </dl>
+            `;
+        }
+
+        function backToFlatTiles() {
+            document.getElementById('flat-detail-level').classList.add('hidden');
+            document.getElementById('flat-tiles-level').classList.remove('hidden');
         }
 
         function updateEventsView() {
