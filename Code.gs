@@ -12,6 +12,7 @@ const CONFIG = {
     RESIDENTS: 'Residents',
     EXPENSES: 'Expenses',
     EVENTS: 'Events',
+    PARTICIPATION: 'Participation',
     SUMMARY: 'Summary',
     ADMINS: 'Admins'
   },
@@ -258,6 +259,10 @@ function fetchAllSheetData() {
   const eventSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.EVENTS);
   const eventValues = eventSheet ? eventSheet.getDataRange().getDisplayValues() : [];
 
+  // 3b. Fetch Participation Data (one row per participant per event)
+  const participationSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.PARTICIPATION);
+  const participationValues = participationSheet ? participationSheet.getDataRange().getDisplayValues() : [];
+
   // 4. Fetch Summary Data (returns all rows and columns for full parsing)
   const summarySheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.SUMMARY);
   const summaryValues = summarySheet ? summarySheet.getDataRange().getDisplayValues() : [];
@@ -300,6 +305,7 @@ function fetchAllSheetData() {
     residents: residentValues,
     expenses: expenseValues,
     events: eventValues,
+    participation: participationValues,
     summary: summaryValues,
     admins: adminEmails,
     adminRegions: adminRegions
@@ -513,19 +519,20 @@ function saveOrUpdateExpense(payload) {
 }
 
 /**
- * Saves a new cultural-activity participation entry to the Events sheet,
- * dynamically mapped to actual column headers so it stays compatible with
- * rows already collected via the Google Form.
+ * Saves a cultural-activity participation entry: one row per event the
+ * participant registered for, into the Participation sheet
+ * (Entry Date | Name | Building | Flat | Event | Song | Any Other Specific Req.).
+ * Song is per-event since a participant's singing piece may differ from
+ * their dance piece.
  */
 function saveParticipant(payload) {
-  if (!payload || !payload.name || !payload.building || !payload.flat || !payload.activities || !payload.activities.length) {
+  if (!payload || !payload.name || !payload.building || !payload.flat || !payload.entries || !payload.entries.length) {
     throw new Error('Name, Building, Flat and at least one Event are required.');
   }
 
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  const sheet = getOrCreateSheet(ss, CONFIG.SHEETS.EVENTS, [
-    'Timestamp', 'Participant Name', 'Age Group', 'Building and Flat Number', 'Mobile Number',
-    'Cultural Activity', 'Song / Performance Piece', 'Special Notes or Performance Details'
+  const sheet = getOrCreateSheet(ss, CONFIG.SHEETS.PARTICIPATION, [
+    'Entry Date', 'Name', 'Building', 'Flat', 'Event', 'Song', 'Any Other Specific Req.'
   ]);
 
   const lastCol = Math.max(sheet.getLastColumn(), 1);
@@ -537,38 +544,32 @@ function saveParticipant(payload) {
     return headers.findIndex(function(h) { return tests.some(function(t) { return h.indexOf(t) !== -1; }); });
   }
 
-  const colTimestamp = findCol(['timestamp']);
-  const colName = findCol(['participant name', 'participant', 'name']);
-  const colAge = findCol(['age group', 'age']);
-  const colFlat = findCol(['building and flat', 'flat', 'unit']);
-  const colPhone = findCol(['mobile', 'phone', 'contact']);
-  const colActivity = findCol(['cultural activity', 'activity', 'activities']);
-  let colSong = findCol(['song', 'performance piece']);
-  const colNotes = findCol(['special notes', 'performance details', 'notes']);
-
-  // Older sheets (created before this feature) won't have a Song column yet — add it.
-  if (colSong === -1) {
-    const newColIndex = sheet.getLastColumn() + 1;
-    sheet.getRange(1, newColIndex).setValue('Song / Performance Piece');
-    headers.push('song / performance piece');
-    colSong = newColIndex - 1;
-  }
+  const colDate = findCol(['entry date', 'date', 'timestamp']);
+  const colName = findCol(['name']);
+  const colBuilding = findCol(['building']);
+  const colFlat = findCol(['flat']);
+  const colEvent = findCol(['event']);
+  const colSong = findCol(['song']);
+  const colNotes = findCol(['any other', 'requirement', 'req', 'notes']);
 
   const numCols = Math.max(headers.length, sheet.getLastColumn());
-  const newRow = new Array(numCols).fill('');
   const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
 
-  if (colTimestamp !== -1) newRow[colTimestamp] = timestamp;
-  if (colName !== -1) newRow[colName] = payload.name;
-  if (colAge !== -1) newRow[colAge] = payload.age || '';
-  if (colFlat !== -1) newRow[colFlat] = `${payload.building}-${payload.flat}`;
-  if (colPhone !== -1) newRow[colPhone] = payload.phone || '';
-  if (colActivity !== -1) newRow[colActivity] = payload.activities.join(', ');
-  if (colSong !== -1) newRow[colSong] = payload.song || '';
-  if (colNotes !== -1) newRow[colNotes] = payload.notes || '';
+  const rowsToAppend = payload.entries.map(function(entry) {
+    const row = new Array(numCols).fill('');
+    if (colDate !== -1) row[colDate] = timestamp;
+    if (colName !== -1) row[colName] = payload.name;
+    if (colBuilding !== -1) row[colBuilding] = payload.building;
+    if (colFlat !== -1) row[colFlat] = payload.flat;
+    if (colEvent !== -1) row[colEvent] = entry.event;
+    if (colSong !== -1) row[colSong] = entry.song || '';
+    if (colNotes !== -1) row[colNotes] = payload.notes || '';
+    return row;
+  });
 
-  sheet.appendRow(newRow);
-  return `Registered ${payload.name} for ${payload.activities.join(', ')}`;
+  rowsToAppend.forEach(function(row) { sheet.appendRow(row); });
+
+  return `Registered ${payload.name} for ${payload.entries.map(function(e) { return e.event; }).join(', ')}`;
 }
 
 /**
