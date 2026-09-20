@@ -27,7 +27,7 @@
     .btn-ghost:hover{text-decoration:underline}
     input,select,textarea{width:100%;border:1px solid #D0C4AE;border-radius:12px;padding:12px 13px;background:#fff;color:#241F16;font:inherit;outline:0}
     input:focus,select:focus,textarea:focus{border-color:#146F6C;box-shadow:0 0 0 3px rgba(20,111,108,.15)}
-    .controls{display:grid;grid-template-columns:minmax(220px,1fr) 190px;gap:10px;margin-bottom:14px}
+    .controls{margin-bottom:14px}
     .badge{display:inline-block;background:#EAF6F5;color:#0F5754;border-radius:999px;padding:5px 10px;font-weight:800;font-size:.78rem}
 
     /* Level 1: event tiles */
@@ -65,12 +65,13 @@
     .check-item{display:flex;align-items:center;gap:8px;border:1px solid #D0C4AE;border-radius:10px;padding:9px 10px;font-size:.86rem;cursor:pointer}
     .check-item input{width:auto}
     .check-item.checked{border-color:#146F6C;background:#EAF6F5;color:#0F5754;font-weight:700}
+    .song-sub{border-left:3px solid #EAF6F5;padding-left:12px;margin-top:8px}
     .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
     .form-msg{font-size:.85rem;border-radius:10px;padding:10px 12px;margin-bottom:14px}
     .form-msg.err{background:#fff5f4;color:#b42318;border:1px solid #fecdca}
     .form-msg.ok{background:#EAF5EF;color:#256648;border:1px solid #C7E5D3}
 
-    @media(max-width:760px){.controls{grid-template-columns:1fr}.topbar{padding-bottom:10px}.row2{grid-template-columns:1fr}}
+    @media(max-width:760px){.topbar{padding-bottom:10px}.row2{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -95,8 +96,7 @@
           <button type="button" class="btn btn-primary" onclick="openAddModal(currentEventFilter)"><span>＋</span> Add Entry</button>
         </div>
         <div class="controls">
-          <input id="search" type="search" placeholder="Search participant, flat or phone…" autocomplete="off">
-          <select id="age"><option value="">All age groups</option></select>
+          <input id="search" type="search" placeholder="Search participant, building or flat…" autocomplete="off">
         </div>
         <div class="summary" style="display:flex;justify-content:space-between;gap:12px;align-items:center;color:#6B5D45;font-size:.9rem;margin:4px 2px 14px">
           <span id="status">—</span>
@@ -111,7 +111,7 @@
   <div id="add-modal-overlay" class="modal-overlay hidden">
     <div class="modal">
       <h3>Add Participation Entry</h3>
-      <p class="sub">Register a resident for one or more cultural activities.</p>
+      <p class="sub">Register a resident for one or more cultural activities. One entry is recorded per event selected.</p>
       <div id="form-msg" class="hidden"></div>
       <form id="add-form" onsubmit="submitParticipant(event)">
         <div class="field">
@@ -128,25 +128,6 @@
             <input id="f-flat" type="text" placeholder="e.g. 402" required>
           </div>
         </div>
-        <div class="row2">
-          <div class="field">
-            <label for="f-phone">Mobile Number</label>
-            <input id="f-phone" type="tel" placeholder="WhatsApp number preferred">
-          </div>
-          <div class="field">
-            <label for="f-age">Age Group</label>
-            <select id="f-age">
-              <option value="">Select age group</option>
-              <option>Below 5 years</option>
-              <option>5-8 years</option>
-              <option>9-12 years</option>
-              <option>13-17 years</option>
-              <option>18-35 years</option>
-              <option>36-59 years</option>
-              <option>60 years and above</option>
-            </select>
-          </div>
-        </div>
         <div class="field">
           <label>Event(s) *</label>
           <div class="checks" id="event-checks">
@@ -155,13 +136,21 @@
             <label class="check-item"><input type="checkbox" value="Dancing"> Dancing</label>
             <label class="check-item"><input type="checkbox" value="Nyati Got Talent"> Nyati Got Talent</label>
           </div>
-        </div>
-        <div class="field hidden" id="song-field">
-          <label for="f-song">Song / Performance Piece</label>
-          <input id="f-song" type="text" placeholder="Song name (for Singing / Dancing)">
+          <div class="song-sub hidden" id="song-singing-field">
+            <div class="field" style="margin-bottom:0">
+              <label for="f-song-singing">Song for Singing</label>
+              <input id="f-song-singing" type="text" placeholder="Song name for the singing performance">
+            </div>
+          </div>
+          <div class="song-sub hidden" id="song-dancing-field">
+            <div class="field" style="margin-bottom:0">
+              <label for="f-song-dancing">Song for Dancing</label>
+              <input id="f-song-dancing" type="text" placeholder="Song name for the dance performance">
+            </div>
+          </div>
         </div>
         <div class="field">
-          <label for="f-notes">Any Other Requirement</label>
+          <label for="f-notes">Any Other Specific Req.</label>
           <textarea id="f-notes" rows="3" placeholder="Costume help, props, timing preference, etc."></textarea>
         </div>
         <div class="modal-actions">
@@ -174,26 +163,29 @@
 
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
-    const CACHE_KEY='nyati-participants-v1', CACHE_TTL=120000;
+    const CACHE_KEY='nyati-participants-v2', CACHE_TTL=120000;
+    // Each item in `participants` is one row = one participant registered for one event
+    // (the Participation sheet stores one row per event selected, since a
+    // performer's song can differ between Singing and Dancing).
     let participants=[];
     let currentEventFilter=null;
     const $=id=>document.getElementById(id);
     const clean=value=>String(value??'').trim();
     const normal=value=>clean(value).toLowerCase();
     function headerIndex(headers,tests){return headers.findIndex(h=>tests.some(test=>h.includes(test)))}
+    function escapeHtml(value){return clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
     function parseRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
       const headers=rows[0].map(normal);
-      const idx={name:headerIndex(headers,['participant name','participant','name']),age:headerIndex(headers,['age group','age']),flat:headerIndex(headers,['building and flat','flat','unit']),phone:headerIndex(headers,['mobile','phone','contact']),activity:headerIndex(headers,['cultural activity','activity','activities']),song:headerIndex(headers,['song','performance piece']),notes:headerIndex(headers,['special notes','performance details','notes'])};
-      return rows.slice(1).map(row=>({name:clean(row[idx.name]),age:clean(row[idx.age]),flat:clean(row[idx.flat]),phone:clean(row[idx.phone]),activity:clean(row[idx.activity]),song:clean(row[idx.song]),notes:clean(row[idx.notes])})).filter(item=>item.name||item.flat||item.activity);
+      const idx={date:headerIndex(headers,['entry date','date','timestamp']),name:headerIndex(headers,['name']),building:headerIndex(headers,['building']),flat:headerIndex(headers,['flat']),event:headerIndex(headers,['event']),song:headerIndex(headers,['song']),notes:headerIndex(headers,['any other','requirement','req','notes'])};
+      return rows.slice(1).map(row=>({date:clean(row[idx.date]),name:clean(row[idx.name]),building:clean(row[idx.building]),flat:clean(row[idx.flat]),event:clean(row[idx.event]),song:clean(row[idx.song]),notes:clean(row[idx.notes])})).filter(item=>item.name||item.event);
     }
-    function splitActivities(value){return clean(value).split(/,|\n|;|\|/).map(v=>v.trim()).filter(Boolean)}
-    function escapeHtml(value){return clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
     // ---- Level 1: event tiles ----
     function renderEventTiles(){
       const counts=new Map();
-      participants.forEach(p=>splitActivities(p.activity).forEach(a=>counts.set(a,(counts.get(a)||0)+1)));
+      participants.forEach(p=>{ if(p.event) counts.set(p.event,(counts.get(p.event)||0)+1); });
       const events=[...counts.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
       $('overall-stat').textContent=participants.length?`${participants.length} total registration${participants.length===1?'':'s'} across ${events.length} event${events.length===1?'':'s'}`:'No registrations yet — be the first to add one!';
       $('event-tiles').innerHTML=events.length?events.map(([name,count])=>`
@@ -209,7 +201,7 @@
       currentEventFilter=decodeURIComponent(encodedName);
       $('tiles-level').classList.add('hidden');
       $('detail-level').classList.remove('hidden');
-      populateAgeFilter();
+      $('search').value='';
       renderDetailList();
     }
 
@@ -220,82 +212,76 @@
       renderEventTiles();
     }
 
-    function populateAgeFilter(){
-      const inEvent=participants.filter(p=>splitActivities(p.activity).includes(currentEventFilter));
-      const ages=[...new Set(inEvent.map(p=>p.age).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-      $('age').innerHTML='<option value="">All age groups</option>'+ages.map(v=>`<option>${escapeHtml(v)}</option>`).join('');
-    }
-
     // ---- Level 2: detail list for the selected event ----
     function renderDetailList(){
-      const query=normal($('search').value), age=normal($('age').value);
-      const inEvent=participants.filter(p=>splitActivities(p.activity).includes(currentEventFilter));
-      const filtered=inEvent.filter(p=>{const hay=normal([p.name,p.flat,p.phone,p.notes].join(' '));return (!query||hay.includes(query))&&(!age||normal(p.age)===age)});
+      const query=normal($('search').value);
+      const inEvent=participants.filter(p=>p.event===currentEventFilter);
+      const filtered=inEvent.filter(p=>{const hay=normal([p.name,p.building,p.flat,p.song,p.notes].join(' '));return !query||hay.includes(query)});
       $('count').textContent=`${filtered.length} participant${filtered.length===1?'':'s'}`;
       $('status').textContent=`${escapeHtml(currentEventFilter)} — showing ${filtered.length} of ${inEvent.length}`;
       $('list').innerHTML=filtered.length?filtered.map(p=>`
         <article class="participant">
           <h2>${escapeHtml(p.name||'Unnamed participant')}</h2>
-          <div class="meta">${splitActivities(p.activity).map(a=>`<span class="tag activity">${escapeHtml(a)}</span>`).join('')}${p.age?`<span class="tag">${escapeHtml(p.age)}</span>`:''}</div>
+          <div class="meta"><span class="tag activity">${escapeHtml(p.event)}</span></div>
           <div class="details">
-            ${p.flat?`<span>🏠 <b>${escapeHtml(p.flat)}</b></span>`:''}
-            ${p.phone?`<span>📱 ${escapeHtml(p.phone)}</span>`:''}
+            ${(p.building||p.flat)?`<span>🏠 <b>${escapeHtml([p.building,p.flat].filter(Boolean).join('-'))}</b></span>`:''}
             ${p.song?`<span>🎵 ${escapeHtml(p.song)}</span>`:''}
             ${p.notes?`<span>📝 ${escapeHtml(p.notes)}</span>`:''}
+            ${p.date?`<span style="opacity:.7">🕒 ${escapeHtml(p.date)}</span>`:''}
           </div>
         </article>
-      `).join(''):'<div class="state" style="grid-column:1/-1">No matching participants. Try clearing a filter.</div>';
+      `).join(''):'<div class="state" style="grid-column:1/-1">No matching participants. Try clearing the search.</div>';
     }
 
     // ---- Add Entry modal ----
+    function refreshSongVisibility(){
+      const boxes=[...$('event-checks').querySelectorAll('input[type=checkbox]')];
+      boxes.forEach(b=>b.closest('.check-item').classList.toggle('checked',b.checked));
+      const singingChecked=boxes.some(b=>b.checked&&b.value==='Singing');
+      const dancingChecked=boxes.some(b=>b.checked&&b.value==='Dancing');
+      $('song-singing-field').classList.toggle('hidden',!singingChecked);
+      $('song-dancing-field').classList.toggle('hidden',!dancingChecked);
+    }
+
     function openAddModal(preselectEvent){
       $('add-modal-overlay').classList.remove('hidden');
       $('form-msg').classList.add('hidden');
       if(preselectEvent){
         const box=[...$('event-checks').querySelectorAll('input[type=checkbox]')].find(b=>b.value===preselectEvent);
-        if(box){
-          box.checked=true;
-          box.closest('.check-item').classList.add('checked');
-          if(preselectEvent==='Singing'||preselectEvent==='Dancing') $('song-field').classList.remove('hidden');
-        }
+        if(box) box.checked=true;
       }
+      refreshSongVisibility();
     }
     function closeAddModal(){
       $('add-modal-overlay').classList.add('hidden');
       $('add-form').reset();
-      $('event-checks').querySelectorAll('.check-item').forEach(el=>el.classList.remove('checked'));
-      $('song-field').classList.add('hidden');
+      refreshSongVisibility();
     }
-    $('event-checks').addEventListener('change',()=>{
-      const boxes=[...$('event-checks').querySelectorAll('input[type=checkbox]')];
-      boxes.forEach(b=>b.closest('.check-item').classList.toggle('checked',b.checked));
-      const needsSong=boxes.some(b=>b.checked&&(b.value==='Singing'||b.value==='Dancing'));
-      $('song-field').classList.toggle('hidden',!needsSong);
-    });
+    $('event-checks').addEventListener('change',refreshSongVisibility);
 
     async function submitParticipant(evt){
       evt.preventDefault();
       const name=clean($('f-name').value), building=clean($('f-building').value), flat=clean($('f-flat').value);
-      const activities=[...$('event-checks').querySelectorAll('input[type=checkbox]:checked')].map(b=>b.value);
+      const checkedBoxes=[...$('event-checks').querySelectorAll('input[type=checkbox]:checked')].map(b=>b.value);
       const msg=$('form-msg');
-      if(!name||!building||!flat||!activities.length){
+      if(!name||!building||!flat||!checkedBoxes.length){
         msg.className='form-msg err';msg.textContent='Please fill Name, Building, Flat and select at least one Event.';msg.classList.remove('hidden');
         return;
       }
+      const notes=clean($('f-notes').value);
+      const entries=checkedBoxes.map(eventName=>{
+        let song='';
+        if(eventName==='Singing') song=clean($('f-song-singing').value);
+        if(eventName==='Dancing') song=clean($('f-song-dancing').value);
+        return {event:eventName, song};
+      });
       const submitBtn=$('submit-btn');
       submitBtn.disabled=true;submitBtn.textContent='Saving…';
       try{
         const response=await fetch(API_URL,{
           method:'POST',
           headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({action:'addParticipant',payload:{
-            name, building, flat,
-            phone: clean($('f-phone').value),
-            age: clean($('f-age').value),
-            activities,
-            song: clean($('f-song').value),
-            notes: clean($('f-notes').value)
-          }})
+          body:JSON.stringify({action:'addParticipant',payload:{ name, building, flat, entries, notes }})
         });
         const result=await response.json();
         if(result.status!=='success') throw new Error(result.message||'Could not save entry.');
@@ -319,12 +305,12 @@
           if(cached&&Date.now()-cached.time<CACHE_TTL){participants=cached.data;renderEventTiles();if(currentEventFilter)renderDetailList();return}
         }
         const response=await fetch(`${API_URL}?action=getAllData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
-        const payload=await response.json();participants=parseRows(payload?.data?.events||[]);localStorage.setItem(CACHE_KEY,JSON.stringify({time:Date.now(),data:participants}));
+        const payload=await response.json();participants=parseRows(payload?.data?.participation||[]);localStorage.setItem(CACHE_KEY,JSON.stringify({time:Date.now(),data:participants}));
         renderEventTiles();
         if(currentEventFilter)renderDetailList();
       }catch(error){$('event-tiles').innerHTML='<div class="error" style="grid-column:1/-1">Participation data could not be loaded. Please try again in a moment.</div>';$('overall-stat').textContent='Could not connect';console.error(error)}
     }
-    $('search').addEventListener('input',renderDetailList);$('age').addEventListener('change',renderDetailList);
+    $('search').addEventListener('input',renderDetailList);
     load();
   </script>
 </body>
