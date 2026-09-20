@@ -11,13 +11,55 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        // Reskins the app's existing "indigo" (brand) and "gray" (neutral) utility
+        // classes in place — every bg-indigo-*, text-indigo-*, border-indigo-*,
+        // bg-gray-*, text-gray-*, border-gray-* in this file (and anything the
+        // JS renders later) picks up these colors automatically.
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+                    },
+                    colors: {
+                        indigo: {
+                            50: '#EAF6F5', 100: '#CFEAE8', 200: '#9FD5D1',
+                            300: '#6DBDB7', 400: '#3FA39C', 500: '#237F79',
+                            600: '#146F6C', 700: '#0F5754', 800: '#0B4240',
+                            900: '#082F2E', 950: '#051E1D',
+                        },
+                        gray: {
+                            50: '#FAF8F4', 100: '#F3EEE5', 200: '#E4DCCD',
+                            300: '#D0C4AE', 400: '#A79876', 500: '#8A7A5C',
+                            600: '#6B5D45', 700: '#4E4433', 800: '#362F22',
+                            900: '#241F16', 950: '#161309',
+                        },
+                    },
+                    boxShadow: {
+                        sm: '0 1px 2px 0 rgba(36,31,22,0.06)',
+                        DEFAULT: '0 1px 3px 0 rgba(36,31,22,0.08), 0 1px 2px -1px rgba(36,31,22,0.06)',
+                        md: '0 4px 10px -2px rgba(36,31,22,0.10), 0 2px 4px -2px rgba(36,31,22,0.06)',
+                        lg: '0 14px 32px -10px rgba(20,111,108,0.16), 0 4px 10px -4px rgba(36,31,22,0.08)',
+                        xl: '0 22px 46px -12px rgba(20,111,108,0.20), 0 8px 16px -8px rgba(36,31,22,0.08)',
+                    },
+                },
+            },
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
             font-family: 'Inter', sans-serif;
             position: relative;
             min-height: 100vh;
+            background: linear-gradient(180deg, #FDFBF8 0%, #FAF8F4 340px, #FAF8F4 100%);
+        }
+
+        h1, h2, h3, .font-display {
+            font-family: 'Fraunces', ui-serif, Georgia, serif;
+            letter-spacing: -0.01em;
         }
 
         /* Ganpati background image with subtle opacity */
@@ -33,6 +75,11 @@
             background-position: center;
             opacity: 0.05;
             z-index: -1;
+        }
+
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+            outline: 2px solid #146F6C;
+            outline-offset: 2px;
         }
 
         .modal-backdrop,
@@ -66,53 +113,53 @@
         }
 
         .flat-btn.empty {
-            background-color: #F3F4F6;
-            color: #374151;
+            background-color: #F3EEE5;
+            color: #4E4433;
         }
 
         .flat-btn.empty:hover {
-            background-color: #E5E7EB;
+            background-color: #E4DCCD;
             transform: translateY(-1px);
         }
 
         .flat-btn.empty .status-dot {
-            background-color: #9CA3AF;
+            background-color: #A79876;
         }
 
         .flat-btn.unpaid {
-            background-color: #FEF3C7;
-            color: #92400E;
+            background-color: #FBEDCB;
+            color: #8A5A0B;
             font-weight: 600;
         }
 
         .flat-btn.unpaid:hover {
-            background-color: #FDE68A;
+            background-color: #F6DFA3;
             transform: translateY(-1px);
         }
 
         .flat-btn.unpaid .status-dot {
-            background-color: #F59E0B;
+            background-color: #D98E04;
         }
 
         .flat-btn.paid {
-            background-color: #22c55e;
+            background-color: #2F7A5C;
             color: white;
             font-weight: 600;
         }
 
         .flat-btn.paid:hover {
-            background-color: #16a34a;
+            background-color: #256648;
             transform: translateY(-1px);
         }
 
         .flat-btn.paid .status-dot {
-            background-color: #10B981;
+            background-color: #6FCBA0;
             box-shadow: 0 0 0 2px white;
         }
 
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #4f46e5;
+            border: 4px solid #F3EEE5;
+            border-top: 4px solid #146F6C;
             border-radius: 50%;
             width: 44px;
             height: 44px;
@@ -134,8 +181,8 @@
         }
 
         .tab-btn.active {
-            border-bottom-color: #4f46e5;
-            color: #4f46e5;
+            border-bottom-color: #146F6C;
+            color: #146F6C;
             font-weight: 700;
         }
 
@@ -144,8 +191,8 @@
         }
 
         .sub-tab-btn.active {
-            background-color: #eef2ff;
-            color: #4f46e5;
+            background-color: #EAF6F5;
+            color: #146F6C;
             font-weight: 600;
         }
 
@@ -159,12 +206,16 @@
 
         .event-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 15px -3px rgba(20, 111, 108, 0.14), 0 4px 6px -2px rgba(36, 31, 22, 0.06);
         }
     </style>
 </head>
 
 <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+
+    <!-- Decorative top accent: marigold-to-peacock, echoing festival bunting -->
+    <div class="fixed top-0 inset-x-0 h-1.5 z-50"
+        style="background: linear-gradient(90deg, #D98E04 0%, #EAB65A 18%, #146F6C 55%, #0B4240 100%);"></div>
 
     <!-- Global Loader Overlay -->
     <div id="loader-overlay"
@@ -178,7 +229,7 @@
         <div
             class="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full text-center">
             <div
-                class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">
+                class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-md">
                 <i class="fas fa-landmark"></i>
             </div>
             <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Nyati Elan Cultural Forum</h1>
@@ -208,10 +259,10 @@
         <div class="container mx-auto p-4 md:p-8 max-w-5xl flex-grow">
             <!-- App Header -->
             <header
-                class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 bg-white/80 backdrop-blur-sm p-5 rounded-2xl shadow-sm border border-gray-100">
+                class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 bg-gradient-to-br from-white to-indigo-50/60 backdrop-blur-sm p-5 rounded-2xl shadow-sm border border-indigo-100/70">
                 <div class="flex items-center gap-3">
                     <div
-                        class="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-xl shadow-md">
+                        class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white rounded-xl flex items-center justify-center text-xl shadow-md">
                         <i class="fas fa-hands-praying"></i>
                     </div>
                     <div>
@@ -258,7 +309,7 @@
             <main id="admin-view" class="bg-white rounded-2xl shadow-lg p-6 space-y-8">
 
                 <!-- Quick Search Bar (Admin View) -->
-                <div class="bg-gradient-to-r from-indigo-50 to-blue-50 p-5 rounded-2xl border border-indigo-100">
+                <div class="bg-gradient-to-r from-indigo-50 to-amber-50 p-5 rounded-2xl border border-indigo-100">
                     <label for="admin-quick-search" class="block text-sm font-semibold text-indigo-900 mb-2">
                         <i class="fas fa-magnifying-glass text-indigo-600 mr-1"></i> Quick Search Flats & Residents
                     </label>
@@ -323,9 +374,9 @@
                             <h2 class="text-lg font-semibold text-gray-800" id="flat-grid-heading">Select a Flat</h2>
                             <div class="flex items-center gap-3 text-xs text-gray-600">
                                 <span class="flex items-center gap-1"><span
-                                        class="w-2.5 h-2.5 rounded-full bg-green-500"></span> Paid</span>
+                                        class="w-2.5 h-2.5 rounded-full bg-[#2F7A5C]"></span> Paid</span>
                                 <span class="flex items-center gap-1"><span
-                                        class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Unpaid</span>
+                                        class="w-2.5 h-2.5 rounded-full bg-[#D98E04]"></span> Unpaid</span>
                                 <span class="flex items-center gap-1"><span
                                         class="w-2.5 h-2.5 rounded-full bg-gray-400"></span> Empty</span>
                             </div>
@@ -394,26 +445,26 @@
                             <p class="text-xs md:text-sm font-medium text-gray-800">Carryover Balance</p>
                             <p id="carryover-balance" class="text-2xl md:text-3xl font-bold text-gray-900 mt-1">₹0</p>
                         </div>
-                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                            <p class="text-xs md:text-sm font-medium text-blue-800"><span
+                        <div class="bg-[#FBF1DC] p-4 rounded-xl border border-[#F0DBA0]">
+                            <p class="text-xs md:text-sm font-medium text-[#8A5A0B]"><span
                                     id="dynamic-year-label">2026</span> Collection</p>
-                            <p id="year-collection" class="text-2xl md:text-3xl font-bold text-blue-900 mt-1">₹0</p>
+                            <p id="year-collection" class="text-2xl md:text-3xl font-bold text-[#6B4408] mt-1">₹0</p>
                         </div>
                         <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                             <p class="text-xs md:text-sm font-medium text-indigo-800">Total Amount</p>
                             <p id="total-amount" class="text-2xl md:text-3xl font-bold text-indigo-900 mt-1">₹0</p>
                         </div>
-                        <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-100">
-                            <p class="text-xs md:text-sm font-medium text-yellow-800">Actual Expense</p>
-                            <p id="actual-expense" class="text-2xl md:text-3xl font-bold text-yellow-900 mt-1">₹0</p>
+                        <div class="bg-[#FBEAE3] p-4 rounded-xl border border-[#F0C7B3]">
+                            <p class="text-xs md:text-sm font-medium text-[#8C4A2A]">Actual Expense</p>
+                            <p id="actual-expense" class="text-2xl md:text-3xl font-bold text-[#6E3A20] mt-1">₹0</p>
                         </div>
-                        <div class="bg-red-50 p-4 rounded-xl border border-red-100">
-                            <p class="text-xs md:text-sm font-medium text-red-800">Committed Expense</p>
-                            <p id="committed-expense" class="text-2xl md:text-3xl font-bold text-red-900 mt-1">₹0</p>
+                        <div class="bg-[#FBE9EA] p-4 rounded-xl border border-[#F0C6C8]">
+                            <p class="text-xs md:text-sm font-medium text-[#8C2F35]">Committed Expense</p>
+                            <p id="committed-expense" class="text-2xl md:text-3xl font-bold text-[#6E2529] mt-1">₹0</p>
                         </div>
-                        <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-                            <p class="text-xs md:text-sm font-medium text-green-800">Balance</p>
-                            <p id="final-balance" class="text-2xl md:text-3xl font-bold text-green-900 mt-1">₹0</p>
+                        <div class="bg-[#EAF5EF] p-4 rounded-xl border border-[#C7E5D3]">
+                            <p class="text-xs md:text-sm font-medium text-[#256648]">Balance</p>
+                            <p id="final-balance" class="text-2xl md:text-3xl font-bold text-[#1B4D36] mt-1">₹0</p>
                         </div>
                     </div>
                 </div>
