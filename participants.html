@@ -3,26 +3,177 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#4338ca">
+  <meta name="theme-color" content="#0F5754">
   <title>Participation list • Nyati Elan Cultural Forum</title>
   <style>
-    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#172033;background:#f6f7fb}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 90% 0,#e0e7ff 0,transparent 30%),#f8fafc}.wrap{width:min(1180px,calc(100% - 28px));margin:auto}.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0}.brand{font-weight:850;color:#202942;text-decoration:none}.back{color:#4f46e5;text-decoration:none;font-weight:700;font-size:.9rem}.intro{padding:30px 0 22px}.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;color:#4f46e5}.intro h1{font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.05em;margin:10px 0 8px}.intro p{color:#667085;margin:0;line-height:1.6}.panel{background:#fff;border:1px solid #e5e7ef;border-radius:20px;padding:18px;box-shadow:0 10px 30px #1720330a}.controls{display:grid;grid-template-columns:minmax(220px,1fr) 190px 190px;gap:10px;margin-bottom:18px}input,select{width:100%;border:1px solid #d8deeb;border-radius:12px;padding:12px 13px;background:#fff;color:#172033;font:inherit;outline:0}input:focus,select:focus{border-color:#6366f1;box-shadow:0 0 0 3px #6366f126}.summary{display:flex;justify-content:space-between;gap:12px;align-items:center;color:#667085;font-size:.9rem;margin:4px 2px 14px}.badge{display:inline-block;background:#eef2ff;color:#4338ca;border-radius:999px;padding:5px 10px;font-weight:800;font-size:.78rem}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.participant{border:1px solid #e8ebf2;border-radius:15px;padding:16px;background:linear-gradient(145deg,#fff,#fafbff)}.participant h2{font-size:1rem;margin:0 0 10px;color:#202942}.meta{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}.tag{font-size:.75rem;border-radius:7px;padding:5px 8px;background:#f1f5f9;color:#475569}.activity{background:#ecfdf5;color:#047857}.details{display:grid;gap:5px;color:#667085;font-size:.86rem}.details b{color:#344054}.state{padding:38px 12px;text-align:center;color:#667085}.error{color:#b42318;background:#fff5f4;border:1px solid #fecdca;border-radius:12px;padding:14px}.skeleton{height:130px;border-radius:15px;background:linear-gradient(90deg,#f1f3f8 25%,#e6e9f2 37%,#f1f3f8 63%);background-size:400% 100%;animation:shine 1.3s infinite}@keyframes shine{to{background-position:-400% 0}}@media(max-width:760px){.controls{grid-template-columns:1fr}.topbar{padding-bottom:10px}}
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#241F16;background:#FAF8F4}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
+    .wrap{width:min(1180px,calc(100% - 28px));margin:auto}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0}
+    .brand{font-weight:850;color:#241F16;text-decoration:none}
+    .back{color:#146F6C;text-decoration:none;font-weight:700;font-size:.9rem}
+    .intro{padding:30px 0 22px}
+    .eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;color:#146F6C}
+    .intro h1{font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.05em;margin:10px 0 8px}
+    .intro p{color:#6B5D45;margin:0;line-height:1.6}
+    .panel{background:#fff;border:1px solid #E4DCCD;border-radius:20px;padding:18px;box-shadow:0 10px 30px rgba(36,31,22,.05)}
+    .toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    .stat-line{color:#6B5D45;font-size:.9rem}
+    .btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;font-size:.9rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+    .btn-primary{background:#146F6C;color:#fff}
+    .btn-primary:hover{background:#0F5754}
+    .btn-ghost{background:none;color:#146F6C;padding:0}
+    .btn-ghost:hover{text-decoration:underline}
+    input,select,textarea{width:100%;border:1px solid #D0C4AE;border-radius:12px;padding:12px 13px;background:#fff;color:#241F16;font:inherit;outline:0}
+    input:focus,select:focus,textarea:focus{border-color:#146F6C;box-shadow:0 0 0 3px rgba(20,111,108,.15)}
+    .controls{display:grid;grid-template-columns:minmax(220px,1fr) 190px;gap:10px;margin-bottom:14px}
+    .badge{display:inline-block;background:#EAF6F5;color:#0F5754;border-radius:999px;padding:5px 10px;font-weight:800;font-size:.78rem}
+
+    /* Level 1: event tiles */
+    .event-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+    .event-tile{background:#fff;border:1px solid #E4DCCD;border-radius:16px;padding:18px;text-align:left;cursor:pointer;transition:.2s;font:inherit;color:inherit}
+    .event-tile:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(20,111,108,.15)}
+    .event-tile .ev-name{font-size:.76rem;font-weight:800;color:#146F6C;text-transform:uppercase;letter-spacing:.06em}
+    .event-tile .ev-count{font-size:1.9rem;font-weight:850;color:#241F16;margin-top:6px}
+    .event-tile .ev-label{font-size:.8rem;color:#6B5D45;margin-top:2px}
+
+    /* Level 2: participant grid */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+    .participant{border:1px solid #E4DCCD;border-radius:15px;padding:16px;background:linear-gradient(145deg,#fff,#FDFBF8)}
+    .participant h2{font-size:1rem;margin:0 0 10px;color:#241F16}
+    .meta{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+    .tag{font-size:.75rem;border-radius:7px;padding:5px 8px;background:#F3EEE5;color:#4E4433}
+    .tag.activity{background:#EAF5EF;color:#256648}
+    .details{display:grid;gap:5px;color:#6B5D45;font-size:.86rem}
+    .details b{color:#362F22}
+    .state{padding:38px 12px;text-align:center;color:#6B5D45}
+    .error{color:#b42318;background:#fff5f4;border:1px solid #fecdca;border-radius:12px;padding:14px}
+    .skeleton{height:130px;border-radius:15px;background:linear-gradient(90deg,#F3EEE5 25%,#E4DCCD 37%,#F3EEE5 63%);background-size:400% 100%;animation:shine 1.3s infinite}
+    @keyframes shine{to{background-position:-400% 0}}
+    .hidden{display:none !important}
+
+    /* Add Entry modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(36,31,22,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
+    .modal{background:#fff;border-radius:20px;padding:26px;width:min(560px,100%);max-height:92vh;overflow-y:auto}
+    .modal h3{margin:0 0 4px;font-size:1.3rem;letter-spacing:-.02em}
+    .modal .sub{color:#6B5D45;font-size:.85rem;margin:0 0 18px}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:.82rem;font-weight:700;color:#4E4433;margin-bottom:5px}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+    .check-item{display:flex;align-items:center;gap:8px;border:1px solid #D0C4AE;border-radius:10px;padding:9px 10px;font-size:.86rem;cursor:pointer}
+    .check-item input{width:auto}
+    .check-item.checked{border-color:#146F6C;background:#EAF6F5;color:#0F5754;font-weight:700}
+    .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+    .form-msg{font-size:.85rem;border-radius:10px;padding:10px 12px;margin-bottom:14px}
+    .form-msg.err{background:#fff5f4;color:#b42318;border:1px solid #fecdca}
+    .form-msg.ok{background:#EAF5EF;color:#256648;border:1px solid #C7E5D3}
+
+    @media(max-width:760px){.controls{grid-template-columns:1fr}.topbar{padding-bottom:10px}.row2{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <header class="wrap topbar"><a class="brand" href="index.html">Nyati Elan Cultural Forum</a><a class="back" href="app.html">Open community hub →</a></header>
   <main class="wrap">
-    <section class="intro"><div class="eyebrow">Cultural activities</div><h1>Participation list</h1><p>Search registrations by participant, flat, building or activity.</p></section>
+    <section class="intro"><div class="eyebrow">Cultural activities</div><h1>Participation list</h1><p>Browse registrations by event, or add a new participant.</p></section>
     <section class="panel" aria-live="polite">
-      <div class="controls"><input id="search" type="search" placeholder="Search participant, flat or phone…" autocomplete="off"><select id="activity"><option value="">All activities</option></select><select id="age"><option value="">All age groups</option></select></div>
-      <div class="summary"><span id="status">Loading registrations…</span><span class="badge" id="count">0 participants</span></div>
-      <div id="list" class="grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+      <div class="toolbar">
+        <span class="stat-line" id="overall-stat">Loading registrations…</span>
+        <button type="button" class="btn btn-primary" onclick="openAddModal()"><span>＋</span> Add Entry</button>
+      </div>
+
+      <!-- Level 1: one tile per event -->
+      <div id="tiles-level">
+        <div id="event-tiles" class="event-tiles"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+      </div>
+
+      <!-- Level 2: all entries for the selected event -->
+      <div id="detail-level" class="hidden">
+        <button type="button" class="btn btn-ghost" onclick="showEventTiles()" style="margin-bottom:14px">← Back to events</button>
+        <div class="controls">
+          <input id="search" type="search" placeholder="Search participant, flat or phone…" autocomplete="off">
+          <select id="age"><option value="">All age groups</option></select>
+        </div>
+        <div class="summary" style="display:flex;justify-content:space-between;gap:12px;align-items:center;color:#6B5D45;font-size:.9rem;margin:4px 2px 14px">
+          <span id="status">—</span>
+          <span class="badge" id="count">0 participants</span>
+        </div>
+        <div id="list" class="grid"></div>
+      </div>
     </section>
   </main>
+
+  <!-- Add Entry Modal -->
+  <div id="add-modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>Add Participation Entry</h3>
+      <p class="sub">Register a resident for one or more cultural activities.</p>
+      <div id="form-msg" class="hidden"></div>
+      <form id="add-form" onsubmit="submitParticipant(event)">
+        <div class="field">
+          <label for="f-name">Participant Name *</label>
+          <input id="f-name" type="text" required>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-building">Building *</label>
+            <input id="f-building" type="text" placeholder="e.g. B1" required>
+          </div>
+          <div class="field">
+            <label for="f-flat">Flat Number *</label>
+            <input id="f-flat" type="text" placeholder="e.g. 402" required>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-phone">Mobile Number</label>
+            <input id="f-phone" type="tel" placeholder="WhatsApp number preferred">
+          </div>
+          <div class="field">
+            <label for="f-age">Age Group</label>
+            <select id="f-age">
+              <option value="">Select age group</option>
+              <option>Below 5 years</option>
+              <option>5-8 years</option>
+              <option>9-12 years</option>
+              <option>13-17 years</option>
+              <option>18-35 years</option>
+              <option>36-59 years</option>
+              <option>60 years and above</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Event(s) *</label>
+          <div class="checks" id="event-checks">
+            <label class="check-item"><input type="checkbox" value="Fancy Dress"> Fancy Dress</label>
+            <label class="check-item"><input type="checkbox" value="Singing"> Singing</label>
+            <label class="check-item"><input type="checkbox" value="Dancing"> Dancing</label>
+            <label class="check-item"><input type="checkbox" value="Nyati Got Talent"> Nyati Got Talent</label>
+          </div>
+        </div>
+        <div class="field hidden" id="song-field">
+          <label for="f-song">Song / Performance Piece</label>
+          <input id="f-song" type="text" placeholder="Song name (for Singing / Dancing)">
+        </div>
+        <div class="field">
+          <label for="f-notes">Any Other Requirement</label>
+          <textarea id="f-notes" rows="3" placeholder="Costume help, props, timing preference, etc."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" style="background:#F3EEE5;color:#4E4433" onclick="closeAddModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn">Register Participant</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
     const CACHE_KEY='nyati-participants-v1', CACHE_TTL=120000;
     let participants=[];
+    let currentEventFilter=null;
     const $=id=>document.getElementById(id);
     const clean=value=>String(value??'').trim();
     const normal=value=>clean(value).toLowerCase();
@@ -30,32 +181,140 @@
     function parseRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
       const headers=rows[0].map(normal);
-      const idx={name:headerIndex(headers,['participant name','participant','name']),age:headerIndex(headers,['age group','age']),flat:headerIndex(headers,['building and flat','flat','unit']),phone:headerIndex(headers,['mobile','phone','contact']),activity:headerIndex(headers,['cultural activity','activity','activities']),notes:headerIndex(headers,['special notes','performance details','notes'])};
-      return rows.slice(1).map(row=>({name:clean(row[idx.name]),age:clean(row[idx.age]),flat:clean(row[idx.flat]),phone:clean(row[idx.phone]),activity:clean(row[idx.activity]),notes:clean(row[idx.notes])})).filter(item=>item.name||item.flat||item.activity);
+      const idx={name:headerIndex(headers,['participant name','participant','name']),age:headerIndex(headers,['age group','age']),flat:headerIndex(headers,['building and flat','flat','unit']),phone:headerIndex(headers,['mobile','phone','contact']),activity:headerIndex(headers,['cultural activity','activity','activities']),song:headerIndex(headers,['song','performance piece']),notes:headerIndex(headers,['special notes','performance details','notes'])};
+      return rows.slice(1).map(row=>({name:clean(row[idx.name]),age:clean(row[idx.age]),flat:clean(row[idx.flat]),phone:clean(row[idx.phone]),activity:clean(row[idx.activity]),song:clean(row[idx.song]),notes:clean(row[idx.notes])})).filter(item=>item.name||item.flat||item.activity);
     }
     function splitActivities(value){return clean(value).split(/,|\n|;|\|/).map(v=>v.trim()).filter(Boolean)}
-    function populateFilters(){
-      const activities=[...new Set(participants.flatMap(p=>splitActivities(p.activity)))].sort((a,b)=>a.localeCompare(b));
-      const ages=[...new Set(participants.map(p=>p.age).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-      $('activity').innerHTML='<option value="">All activities</option>'+activities.map(v=>`<option>${escapeHtml(v)}</option>`).join('');
+    function escapeHtml(value){return clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+    // ---- Level 1: event tiles ----
+    function renderEventTiles(){
+      const counts=new Map();
+      participants.forEach(p=>splitActivities(p.activity).forEach(a=>counts.set(a,(counts.get(a)||0)+1)));
+      const events=[...counts.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+      $('overall-stat').textContent=participants.length?`${participants.length} total registration${participants.length===1?'':'s'} across ${events.length} event${events.length===1?'':'s'}`:'No registrations yet — be the first to add one!';
+      $('event-tiles').innerHTML=events.length?events.map(([name,count])=>`
+        <button type="button" class="event-tile" onclick="openEventDetail('${encodeURIComponent(name)}')">
+          <div class="ev-name">${escapeHtml(name)}</div>
+          <div class="ev-count">${count}</div>
+          <div class="ev-label">${count===1?'participant':'participants'}</div>
+        </button>
+      `).join(''):'<div class="state" style="grid-column:1/-1">No events yet. Click "Add Entry" to register the first participant.</div>';
+    }
+
+    function openEventDetail(encodedName){
+      currentEventFilter=decodeURIComponent(encodedName);
+      $('tiles-level').classList.add('hidden');
+      $('detail-level').classList.remove('hidden');
+      populateAgeFilter();
+      renderDetailList();
+    }
+
+    function showEventTiles(){
+      currentEventFilter=null;
+      $('detail-level').classList.add('hidden');
+      $('tiles-level').classList.remove('hidden');
+      renderEventTiles();
+    }
+
+    function populateAgeFilter(){
+      const inEvent=participants.filter(p=>splitActivities(p.activity).includes(currentEventFilter));
+      const ages=[...new Set(inEvent.map(p=>p.age).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
       $('age').innerHTML='<option value="">All age groups</option>'+ages.map(v=>`<option>${escapeHtml(v)}</option>`).join('');
     }
-    function escapeHtml(value){return clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-    function render(){
-      const query=normal($('search').value), activity=normal($('activity').value), age=normal($('age').value);
-      const filtered=participants.filter(p=>{const hay=normal([p.name,p.flat,p.phone,p.activity,p.notes].join(' '));return (!query||hay.includes(query))&&(!activity||splitActivities(p.activity).some(v=>normal(v)===activity))&&(!age||normal(p.age)===age)});
-      $('count').textContent=`${filtered.length} participant${filtered.length===1?'':'s'}`;$('status').textContent=participants.length?`Showing ${filtered.length} of ${participants.length} registrations`:'No registrations found';
-      $('list').innerHTML=filtered.length?filtered.map(p=>`<article class="participant"><h2>${escapeHtml(p.name||'Unnamed participant')}</h2><div class="meta">${splitActivities(p.activity).map(a=>`<span class="tag activity">${escapeHtml(a)}</span>`).join('')}${p.age?`<span class="tag">${escapeHtml(p.age)}</span>`:''}</div><div class="details">${p.flat?`<span>🏠 <b>${escapeHtml(p.flat)}</b></span>`:''}${p.phone?`<span>📱 ${escapeHtml(p.phone)}</span>`:''}${p.notes?`<span>📝 ${escapeHtml(p.notes)}</span>`:''}</div></article>`).join(''):'<div class="state" style="grid-column:1/-1">No matching participants. Try clearing a filter.</div>';
+
+    // ---- Level 2: detail list for the selected event ----
+    function renderDetailList(){
+      const query=normal($('search').value), age=normal($('age').value);
+      const inEvent=participants.filter(p=>splitActivities(p.activity).includes(currentEventFilter));
+      const filtered=inEvent.filter(p=>{const hay=normal([p.name,p.flat,p.phone,p.notes].join(' '));return (!query||hay.includes(query))&&(!age||normal(p.age)===age)});
+      $('count').textContent=`${filtered.length} participant${filtered.length===1?'':'s'}`;
+      $('status').textContent=`${escapeHtml(currentEventFilter)} — showing ${filtered.length} of ${inEvent.length}`;
+      $('list').innerHTML=filtered.length?filtered.map(p=>`
+        <article class="participant">
+          <h2>${escapeHtml(p.name||'Unnamed participant')}</h2>
+          <div class="meta">${splitActivities(p.activity).map(a=>`<span class="tag activity">${escapeHtml(a)}</span>`).join('')}${p.age?`<span class="tag">${escapeHtml(p.age)}</span>`:''}</div>
+          <div class="details">
+            ${p.flat?`<span>🏠 <b>${escapeHtml(p.flat)}</b></span>`:''}
+            ${p.phone?`<span>📱 ${escapeHtml(p.phone)}</span>`:''}
+            ${p.song?`<span>🎵 ${escapeHtml(p.song)}</span>`:''}
+            ${p.notes?`<span>📝 ${escapeHtml(p.notes)}</span>`:''}
+          </div>
+        </article>
+      `).join(''):'<div class="state" style="grid-column:1/-1">No matching participants. Try clearing a filter.</div>';
     }
-    async function load(){
+
+    // ---- Add Entry modal ----
+    function openAddModal(){
+      $('add-modal-overlay').classList.remove('hidden');
+      $('form-msg').classList.add('hidden');
+    }
+    function closeAddModal(){
+      $('add-modal-overlay').classList.add('hidden');
+      $('add-form').reset();
+      $('event-checks').querySelectorAll('.check-item').forEach(el=>el.classList.remove('checked'));
+      $('song-field').classList.add('hidden');
+    }
+    $('event-checks').addEventListener('change',()=>{
+      const boxes=[...$('event-checks').querySelectorAll('input[type=checkbox]')];
+      boxes.forEach(b=>b.closest('.check-item').classList.toggle('checked',b.checked));
+      const needsSong=boxes.some(b=>b.checked&&(b.value==='Singing'||b.value==='Dancing'));
+      $('song-field').classList.toggle('hidden',!needsSong);
+    });
+
+    async function submitParticipant(evt){
+      evt.preventDefault();
+      const name=clean($('f-name').value), building=clean($('f-building').value), flat=clean($('f-flat').value);
+      const activities=[...$('event-checks').querySelectorAll('input[type=checkbox]:checked')].map(b=>b.value);
+      const msg=$('form-msg');
+      if(!name||!building||!flat||!activities.length){
+        msg.className='form-msg err';msg.textContent='Please fill Name, Building, Flat and select at least one Event.';msg.classList.remove('hidden');
+        return;
+      }
+      const submitBtn=$('submit-btn');
+      submitBtn.disabled=true;submitBtn.textContent='Saving…';
       try{
-        const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
-        if(cached&&Date.now()-cached.time<CACHE_TTL){participants=cached.data;populateFilters();render();$('status').textContent=`Updated ${new Date(cached.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;return}
-        const response=await fetch(`${API_URL}?action=getAllData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
-        const payload=await response.json();participants=parseRows(payload?.data?.events||[]);localStorage.setItem(CACHE_KEY,JSON.stringify({time:Date.now(),data:participants}));populateFilters();render();
-      }catch(error){$('list').innerHTML='<div class="error" style="grid-column:1/-1">Participation data could not be loaded. Please try again in a moment.</div>';$('status').textContent='Could not connect';console.error(error)}
+        const response=await fetch(API_URL,{
+          method:'POST',
+          headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({action:'addParticipant',payload:{
+            name, building, flat,
+            phone: clean($('f-phone').value),
+            age: clean($('f-age').value),
+            activities,
+            song: clean($('f-song').value),
+            notes: clean($('f-notes').value)
+          }})
+        });
+        const result=await response.json();
+        if(result.status!=='success') throw new Error(result.message||'Could not save entry.');
+        localStorage.removeItem(CACHE_KEY);
+        msg.className='form-msg ok';msg.textContent='Registered! Refreshing the list…';msg.classList.remove('hidden');
+        await load({force:true});
+        setTimeout(closeAddModal,900);
+      }catch(err){
+        msg.className='form-msg err';msg.textContent='Could not save entry. Please try again.';msg.classList.remove('hidden');
+        console.error(err);
+      }finally{
+        submitBtn.disabled=false;submitBtn.textContent='Register Participant';
+      }
     }
-    $('search').addEventListener('input',render);$('activity').addEventListener('change',render);$('age').addEventListener('change',render);load();
+
+    async function load(opts){
+      opts=opts||{};
+      try{
+        if(!opts.force){
+          const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+          if(cached&&Date.now()-cached.time<CACHE_TTL){participants=cached.data;renderEventTiles();if(currentEventFilter)renderDetailList();return}
+        }
+        const response=await fetch(`${API_URL}?action=getAllData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
+        const payload=await response.json();participants=parseRows(payload?.data?.events||[]);localStorage.setItem(CACHE_KEY,JSON.stringify({time:Date.now(),data:participants}));
+        renderEventTiles();
+        if(currentEventFilter)renderDetailList();
+      }catch(error){$('event-tiles').innerHTML='<div class="error" style="grid-column:1/-1">Participation data could not be loaded. Please try again in a moment.</div>';$('overall-stat').textContent='Could not connect';console.error(error)}
+    }
+    $('search').addEventListener('input',renderDetailList);$('age').addEventListener('change',renderDetailList);
+    load();
   </script>
 </body>
 </html>
