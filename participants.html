@@ -90,7 +90,10 @@
 
       <!-- Level 2: all entries for the selected event -->
       <div id="detail-level" class="hidden">
-        <button type="button" class="btn btn-ghost" onclick="showEventTiles()" style="margin-bottom:14px">← Back to events</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <button type="button" class="btn btn-ghost" onclick="showEventTiles()">← Back to events</button>
+          <button type="button" class="btn btn-primary" onclick="openAddModal(currentEventFilter)"><span>＋</span> Add Entry</button>
+        </div>
         <div class="controls">
           <input id="search" type="search" placeholder="Search participant, flat or phone…" autocomplete="off">
           <select id="age"><option value="">All age groups</option></select>
@@ -245,9 +248,17 @@
     }
 
     // ---- Add Entry modal ----
-    function openAddModal(){
+    function openAddModal(preselectEvent){
       $('add-modal-overlay').classList.remove('hidden');
       $('form-msg').classList.add('hidden');
+      if(preselectEvent){
+        const box=[...$('event-checks').querySelectorAll('input[type=checkbox]')].find(b=>b.value===preselectEvent);
+        if(box){
+          box.checked=true;
+          box.closest('.check-item').classList.add('checked');
+          if(preselectEvent==='Singing'||preselectEvent==='Dancing') $('song-field').classList.remove('hidden');
+        }
+      }
     }
     function closeAddModal(){
       $('add-modal-overlay').classList.add('hidden');
