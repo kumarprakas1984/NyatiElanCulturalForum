@@ -185,6 +185,22 @@ function doGet(e) {
       return createJsonResponse({ status: 'success', data: data });
     }
 
+    // Lightweight, single-sheet reads for pages that only need one dataset —
+    // avoids paying for the full 6-sheet fetchAllSheetData() read on every load.
+    if (action === 'getParticipationData') {
+      const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+      const participationSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.PARTICIPATION);
+      const participationValues = participationSheet ? participationSheet.getDataRange().getDisplayValues() : [];
+      return createJsonResponse({ status: 'success', data: { participation: participationValues } });
+    }
+
+    if (action === 'getAnnadanData') {
+      const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+      const annadanSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.ANNADAN);
+      const annadanValues = annadanSheet ? annadanSheet.getDataRange().getDisplayValues() : [];
+      return createJsonResponse({ status: 'success', data: { annadanItems: annadanValues } });
+    }
+
     if (action === 'ping') {
       return createJsonResponse({ 
         status: 'success', 
