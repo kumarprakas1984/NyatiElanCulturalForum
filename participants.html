@@ -23,6 +23,8 @@
     .btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;font-size:.9rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:.15s}
     .btn-primary{background:#146F6C;color:#fff}
     .btn-primary:hover{background:#0F5754}
+    .btn-outline{background:#fff;color:#146F6C;border:1px solid #146F6C}
+    .btn-outline:hover{background:#EAF6F5}
     .btn-ghost{background:none;color:#146F6C;padding:0}
     .btn-ghost:hover{text-decoration:underline}
     input,select,textarea{width:100%;border:1px solid #D0C4AE;border-radius:12px;padding:12px 13px;background:#fff;color:#241F16;font:inherit;outline:0}
@@ -81,7 +83,10 @@
     <section class="panel" aria-live="polite">
       <div class="toolbar">
         <span class="stat-line" id="overall-stat">Loading registrations…</span>
-        <button type="button" class="btn btn-primary" onclick="openAddModal()"><span>＋</span> Add Entry</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-outline" onclick="downloadAllExcel()"><span>⬇</span> Download All (Excel)</button>
+          <button type="button" class="btn btn-primary" onclick="openAddModal()"><span>＋</span> Add Entry</button>
+        </div>
       </div>
 
       <!-- Level 1: one tile per event -->
@@ -93,7 +98,11 @@
       <div id="detail-level" class="hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <button type="button" class="btn btn-ghost" onclick="showEventTiles()">← Back to events</button>
-          <button type="button" class="btn btn-primary" onclick="openAddModal(currentEventFilter)"><span>＋</span> Add Entry</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-outline" onclick="downloadEventExcel()"><span>⬇</span> Excel</button>
+            <button type="button" class="btn btn-outline" onclick="downloadEventPdf()"><span>⬇</span> PDF</button>
+            <button type="button" class="btn btn-primary" onclick="openAddModal(currentEventFilter)"><span>＋</span> Add Entry</button>
+          </div>
         </div>
         <div class="controls">
           <input id="search" type="search" placeholder="Search participant, building or flat…" autocomplete="off">
@@ -165,6 +174,9 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
     const CACHE_KEY='nyati-participants-v3', CACHE_TTL=120000;
@@ -173,6 +185,7 @@
     // performer's song can differ between Singing and Dancing).
     let participants=[];
     let currentEventFilter=null;
+    let currentFilteredList=[];
     const $=id=>document.getElementById(id);
     const clean=value=>String(value??'').trim();
     const normal=value=>clean(value).toLowerCase();
@@ -221,6 +234,7 @@
       const query=normal($('search').value);
       const inEvent=participants.filter(p=>p.event===currentEventFilter);
       const filtered=inEvent.filter(p=>{const hay=normal([p.name,p.mobile,p.building,p.flat,p.song,p.notes].join(' '));return !query||hay.includes(query)});
+      currentFilteredList=filtered;
       $('count').textContent=`${filtered.length} participant${filtered.length===1?'':'s'}`;
       $('status').textContent=`${escapeHtml(currentEventFilter)} — showing ${filtered.length} of ${inEvent.length}`;
       $('list').innerHTML=filtered.length?filtered.map(p=>`
@@ -300,6 +314,54 @@
       }finally{
         submitBtn.disabled=false;submitBtn.textContent='Register Participant';
       }
+    }
+
+    // ---- Excel / PDF export ----
+    const PARTICIPANT_COLUMNS=[
+      {key:'name',header:'Name'},
+      {key:'mobile',header:'Mobile'},
+      {key:'building',header:'Building'},
+      {key:'flat',header:'Flat'},
+      {key:'event',header:'Event'},
+      {key:'song',header:'Song'},
+      {key:'notes',header:'Any Other Specific Req.'},
+      {key:'date',header:'Entry Date'}
+    ];
+    function safeFilename(text){return clean(text).replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'')||'export'}
+    function exportRowsToExcel(rows,columns,filename,sheetName){
+      const data=[columns.map(c=>c.header),...rows.map(r=>columns.map(c=>r[c.key]||''))];
+      const ws=XLSX.utils.aoa_to_sheet(data);
+      ws['!cols']=columns.map(c=>({wch:Math.max(c.header.length+2,14)}));
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,sheetName||'Sheet1');
+      XLSX.writeFile(wb,filename);
+    }
+    function exportRowsToPdf(rows,columns,title,filename){
+      const {jsPDF}=window.jspdf;
+      const doc=new jsPDF({orientation:'landscape'});
+      doc.setFontSize(14);
+      doc.text(title,14,15);
+      doc.autoTable({
+        startY:20,
+        head:[columns.map(c=>c.header)],
+        body:rows.map(r=>columns.map(c=>r[c.key]||'')),
+        styles:{fontSize:9,cellPadding:3},
+        headStyles:{fillColor:[20,111,108]},
+        margin:{left:10,right:10}
+      });
+      doc.save(filename);
+    }
+    function downloadEventExcel(){
+      if(!currentFilteredList.length){alert('No participants to export for this event.');return}
+      exportRowsToExcel(currentFilteredList,PARTICIPANT_COLUMNS,`${safeFilename(currentEventFilter)}-participants.xlsx`,safeFilename(currentEventFilter).slice(0,31));
+    }
+    function downloadEventPdf(){
+      if(!currentFilteredList.length){alert('No participants to export for this event.');return}
+      exportRowsToPdf(currentFilteredList,PARTICIPANT_COLUMNS,`${currentEventFilter} — Participants`,`${safeFilename(currentEventFilter)}-participants.pdf`);
+    }
+    function downloadAllExcel(){
+      if(!participants.length){alert('No registrations to export yet.');return}
+      exportRowsToExcel(participants,PARTICIPANT_COLUMNS,'all-participants.xlsx','All Participants');
     }
 
     async function load(opts){
