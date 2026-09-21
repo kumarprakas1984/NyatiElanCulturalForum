@@ -118,6 +118,10 @@
           <label for="f-name">Participant Name *</label>
           <input id="f-name" type="text" required>
         </div>
+        <div class="field">
+          <label for="f-mobile">Mobile Number *</label>
+          <input id="f-mobile" type="tel" placeholder="WhatsApp number preferred" required>
+        </div>
         <div class="row2">
           <div class="field">
             <label for="f-building">Building *</label>
@@ -163,7 +167,7 @@
 
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
-    const CACHE_KEY='nyati-participants-v2', CACHE_TTL=120000;
+    const CACHE_KEY='nyati-participants-v3', CACHE_TTL=120000;
     // Each item in `participants` is one row = one participant registered for one event
     // (the Participation sheet stores one row per event selected, since a
     // performer's song can differ between Singing and Dancing).
@@ -178,8 +182,8 @@
     function parseRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
       const headers=rows[0].map(normal);
-      const idx={date:headerIndex(headers,['entry date','date','timestamp']),name:headerIndex(headers,['name']),building:headerIndex(headers,['building']),flat:headerIndex(headers,['flat']),event:headerIndex(headers,['event']),song:headerIndex(headers,['song']),notes:headerIndex(headers,['any other','requirement','req','notes'])};
-      return rows.slice(1).map(row=>({date:clean(row[idx.date]),name:clean(row[idx.name]),building:clean(row[idx.building]),flat:clean(row[idx.flat]),event:clean(row[idx.event]),song:clean(row[idx.song]),notes:clean(row[idx.notes])})).filter(item=>item.name||item.event);
+      const idx={date:headerIndex(headers,['entry date','date','timestamp']),name:headerIndex(headers,['name']),mobile:headerIndex(headers,['mobile','phone','contact']),building:headerIndex(headers,['building']),flat:headerIndex(headers,['flat']),event:headerIndex(headers,['event']),song:headerIndex(headers,['song']),notes:headerIndex(headers,['any other','requirement','req','notes'])};
+      return rows.slice(1).map(row=>({date:clean(row[idx.date]),name:clean(row[idx.name]),mobile:clean(row[idx.mobile]),building:clean(row[idx.building]),flat:clean(row[idx.flat]),event:clean(row[idx.event]),song:clean(row[idx.song]),notes:clean(row[idx.notes])})).filter(item=>item.name||item.event);
     }
 
     // ---- Level 1: event tiles ----
@@ -216,7 +220,7 @@
     function renderDetailList(){
       const query=normal($('search').value);
       const inEvent=participants.filter(p=>p.event===currentEventFilter);
-      const filtered=inEvent.filter(p=>{const hay=normal([p.name,p.building,p.flat,p.song,p.notes].join(' '));return !query||hay.includes(query)});
+      const filtered=inEvent.filter(p=>{const hay=normal([p.name,p.mobile,p.building,p.flat,p.song,p.notes].join(' '));return !query||hay.includes(query)});
       $('count').textContent=`${filtered.length} participant${filtered.length===1?'':'s'}`;
       $('status').textContent=`${escapeHtml(currentEventFilter)} — showing ${filtered.length} of ${inEvent.length}`;
       $('list').innerHTML=filtered.length?filtered.map(p=>`
@@ -225,6 +229,7 @@
           <div class="meta"><span class="tag activity">${escapeHtml(p.event)}</span></div>
           <div class="details">
             ${(p.building||p.flat)?`<span>🏠 <b>${escapeHtml([p.building,p.flat].filter(Boolean).join('-'))}</b></span>`:''}
+            ${p.mobile?`<span>📱 ${escapeHtml(p.mobile)}</span>`:''}
             ${p.song?`<span>🎵 ${escapeHtml(p.song)}</span>`:''}
             ${p.notes?`<span>📝 ${escapeHtml(p.notes)}</span>`:''}
             ${p.date?`<span style="opacity:.7">🕒 ${escapeHtml(p.date)}</span>`:''}
@@ -261,11 +266,11 @@
 
     async function submitParticipant(evt){
       evt.preventDefault();
-      const name=clean($('f-name').value), building=clean($('f-building').value), flat=clean($('f-flat').value);
+      const name=clean($('f-name').value), mobile=clean($('f-mobile').value), building=clean($('f-building').value), flat=clean($('f-flat').value);
       const checkedBoxes=[...$('event-checks').querySelectorAll('input[type=checkbox]:checked')].map(b=>b.value);
       const msg=$('form-msg');
-      if(!name||!building||!flat||!checkedBoxes.length){
-        msg.className='form-msg err';msg.textContent='Please fill Name, Building, Flat and select at least one Event.';msg.classList.remove('hidden');
+      if(!name||!mobile||!building||!flat||!checkedBoxes.length){
+        msg.className='form-msg err';msg.textContent='Please fill Name, Mobile, Building, Flat and select at least one Event.';msg.classList.remove('hidden');
         return;
       }
       const notes=clean($('f-notes').value);
@@ -281,7 +286,7 @@
         const response=await fetch(API_URL,{
           method:'POST',
           headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({action:'addParticipant',payload:{ name, building, flat, entries, notes }})
+          body:JSON.stringify({action:'addParticipant',payload:{ name, mobile, building, flat, entries, notes }})
         });
         const result=await response.json();
         if(result.status!=='success') throw new Error(result.message||'Could not save entry.');
