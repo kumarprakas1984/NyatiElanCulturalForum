@@ -371,7 +371,7 @@
           const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
           if(cached&&Date.now()-cached.time<CACHE_TTL){participants=cached.data;renderEventTiles();if(currentEventFilter)renderDetailList();return}
         }
-        const response=await fetch(`${API_URL}?action=getAllData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
+        const response=await fetch(`${API_URL}?action=getParticipationData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
         const payload=await response.json();participants=parseRows(payload?.data?.participation||[]);localStorage.setItem(CACHE_KEY,JSON.stringify({time:Date.now(),data:participants}));
         renderEventTiles();
         if(currentEventFilter)renderDetailList();
