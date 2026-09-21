@@ -13,6 +13,7 @@ const CONFIG = {
     EXPENSES: 'Expenses',
     EVENTS: 'Events',
     PARTICIPATION: 'Participation',
+    ANNADAN: 'Annadan',
     SUMMARY: 'Summary',
     ADMINS: 'Admins'
   },
@@ -234,6 +235,12 @@ function doPost(e) {
       return createJsonResponse({ status: 'success', data: resultMessage });
     }
 
+    if (action === 'addAnnadanResponse' || action === 'donateAnnadan') {
+      const payload = request.payload;
+      const resultMessage = saveAnnadanResponse(payload);
+      return createJsonResponse({ status: 'success', data: resultMessage });
+    }
+
     return createJsonResponse({ status: 'error', message: `Unknown POST action: ${action}` });
   } catch (error) {
     return createJsonResponse({ status: 'error', message: error.toString() });
@@ -262,6 +269,12 @@ function fetchAllSheetData() {
   // 3b. Fetch Participation Data (one row per participant per event)
   const participationSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.PARTICIPATION);
   const participationValues = participationSheet ? participationSheet.getDataRange().getDisplayValues() : [];
+
+  // 3c. Fetch Annadan requirements (pledge details are intentionally NOT exposed here —
+  // donations are anonymous. Received/Still Needed totals are pre-aggregated server-side
+  // by recalculateAnnadanTotals() whenever a pledge is saved.)
+  const annadanSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.ANNADAN);
+  const annadanValues = annadanSheet ? annadanSheet.getDataRange().getDisplayValues() : [];
 
   // 4. Fetch Summary Data (returns all rows and columns for full parsing)
   const summarySheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.SUMMARY);
@@ -306,6 +319,7 @@ function fetchAllSheetData() {
     expenses: expenseValues,
     events: eventValues,
     participation: participationValues,
+    annadanItems: annadanValues,
     summary: summaryValues,
     admins: adminEmails,
     adminRegions: adminRegions
@@ -570,6 +584,134 @@ function saveParticipant(payload) {
   rowsToAppend.forEach(function(row) { sheet.appendRow(row); });
 
   return `Registered ${payload.name} for ${payload.entries.map(function(e) { return e.event; }).join(', ')}`;
+}
+
+/**
+ * Finds the Annadan pledges sheet, tolerating a couple of likely name
+ * variants (e.g. a "Response"/"Resonce" spelling difference) without
+ * creating anything — used for read paths.
+ */
+function findAnnadanResponseSheet(ss) {
+  const candidates = ['Annadan Response', 'Annadan Resonce', 'Annadan Responses'];
+  for (let i = 0; i < candidates.length; i++) {
+    const found = getSheetCaseInsensitive(ss, candidates[i]);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Same lookup as findAnnadanResponseSheet, but creates the canonical
+ * "Annadan Response" sheet (with the requested headers) if none exists yet.
+ * Used only on the write path so read calls never mutate the spreadsheet.
+ */
+function getOrCreateAnnadanResponseSheet(ss) {
+  const existing = findAnnadanResponseSheet(ss);
+  if (existing) return existing;
+  return getOrCreateSheet(ss, 'Annadan Response', [
+    'Response Time', 'Name', 'Mobile', 'Building', 'Flat', 'Item', 'Quantity'
+  ]);
+}
+
+/**
+ * Saves a new Annadan donation pledge, then recalculates the
+ * Quantity Received / Quantity Still Needed columns on the Annadan sheet.
+ */
+function saveAnnadanResponse(payload) {
+  if (!payload || !payload.name || !payload.building || !payload.flat || !payload.item || !payload.quantity) {
+    throw new Error('Name, Building, Flat, Item and Quantity are required.');
+  }
+
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = getOrCreateAnnadanResponseSheet(ss);
+
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(function(h) {
+    return String(h).trim().toLowerCase();
+  });
+
+  function findCol(tests) {
+    return headers.findIndex(function(h) { return tests.some(function(t) { return h.indexOf(t) !== -1; }); });
+  }
+
+  const colTime = findCol(['response time', 'timestamp', 'time']);
+  const colName = findCol(['name']);
+  const colMobile = findCol(['mobile', 'phone', 'contact']);
+  const colBuilding = findCol(['building']);
+  const colFlat = findCol(['flat']);
+  const colItem = findCol(['item']);
+  const colQty = findCol(['quantity', 'qty']);
+
+  const numCols = Math.max(headers.length, sheet.getLastColumn());
+  const row = new Array(numCols).fill('');
+  const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+  if (colTime !== -1) row[colTime] = timestamp;
+  if (colName !== -1) row[colName] = payload.name;
+  if (colMobile !== -1) row[colMobile] = payload.mobile || '';
+  if (colBuilding !== -1) row[colBuilding] = payload.building;
+  if (colFlat !== -1) row[colFlat] = payload.flat;
+  if (colItem !== -1) row[colItem] = payload.item;
+  if (colQty !== -1) row[colQty] = Number(payload.quantity) || 0;
+
+  sheet.appendRow(row);
+
+  recalculateAnnadanTotals(ss);
+
+  return `Thank you! Recorded ${payload.quantity} kg of ${payload.item} pledged by ${payload.name}`;
+}
+
+/**
+ * Recomputes Quantity Received (sum of all pledges per item) and
+ * Quantity Still Needed (Required minus Received, floored at 0) on the
+ * Annadan sheet. Item column and Quantity Required are left untouched —
+ * those stay admin-managed.
+ */
+function recalculateAnnadanTotals(ss) {
+  ss = ss || SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const annadanSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.ANNADAN);
+  if (!annadanSheet) return;
+
+  const annadanValues = annadanSheet.getDataRange().getValues();
+  if (annadanValues.length < 2) return;
+  const annadanHeaders = annadanValues[0].map(function(h) { return String(h).trim().toLowerCase(); });
+
+  const colItem = annadanHeaders.findIndex(function(h) { return h.indexOf('item') !== -1; });
+  const colRequired = annadanHeaders.findIndex(function(h) { return h.indexOf('required') !== -1; });
+  const colReceived = annadanHeaders.findIndex(function(h) { return h.indexOf('received') !== -1; });
+  const colStillNeeded = annadanHeaders.findIndex(function(h) { return h.indexOf('still needed') !== -1 || h.indexOf('remaining') !== -1; });
+
+  if (colItem === -1 || (colReceived === -1 && colStillNeeded === -1)) return;
+
+  // Sum pledged quantities per item (case-insensitive, trimmed) from the responses sheet.
+  const responseSheet = findAnnadanResponseSheet(ss);
+  const totals = {};
+  if (responseSheet) {
+    const responseValues = responseSheet.getDataRange().getValues();
+    if (responseValues.length > 1) {
+      const responseHeaders = responseValues[0].map(function(h) { return String(h).trim().toLowerCase(); });
+      const rColItem = responseHeaders.findIndex(function(h) { return h.indexOf('item') !== -1; });
+      const rColQty = responseHeaders.findIndex(function(h) { return h.indexOf('quantity') !== -1 || h.indexOf('qty') !== -1; });
+      if (rColItem !== -1 && rColQty !== -1) {
+        for (let i = 1; i < responseValues.length; i++) {
+          const itemKey = String(responseValues[i][rColItem] || '').trim().toLowerCase();
+          if (!itemKey) continue;
+          const qty = Number(responseValues[i][rColQty]) || 0;
+          totals[itemKey] = (totals[itemKey] || 0) + qty;
+        }
+      }
+    }
+  }
+
+  for (let i = 1; i < annadanValues.length; i++) {
+    const itemKey = String(annadanValues[i][colItem] || '').trim().toLowerCase();
+    if (!itemKey) continue;
+    const required = colRequired !== -1 ? (Number(annadanValues[i][colRequired]) || 0) : 0;
+    const received = totals[itemKey] || 0;
+    const stillNeeded = Math.max(required - received, 0);
+    if (colReceived !== -1) annadanSheet.getRange(i + 1, colReceived + 1).setValue(received);
+    if (colStillNeeded !== -1) annadanSheet.getRange(i + 1, colStillNeeded + 1).setValue(stillNeeded);
+  }
 }
 
 /**
