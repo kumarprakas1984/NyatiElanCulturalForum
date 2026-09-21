@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0F5754">
+  <title>Annadan Seva • Nyati Elan Cultural Forum</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#241F16;background:#FAF8F4}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
+    .wrap{width:min(1180px,calc(100% - 28px));margin:auto}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0}
+    .brand{font-weight:850;color:#241F16;text-decoration:none}
+    .back{color:#146F6C;text-decoration:none;font-weight:700;font-size:.9rem}
+    .intro{padding:30px 0 22px}
+    .eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;color:#146F6C}
+    .intro h1{font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.05em;margin:10px 0 8px}
+    .intro p{color:#6B5D45;margin:0;line-height:1.6}
+    .panel{background:#fff;border:1px solid #E4DCCD;border-radius:20px;padding:18px;box-shadow:0 10px 30px rgba(36,31,22,.05)}
+    .toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    .stat-line{color:#6B5D45;font-size:.9rem}
+    .note{color:#6B5D45;font-size:.82rem;display:flex;align-items:center;gap:6px;margin-bottom:16px}
+    .btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;font-size:.9rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+    .btn-primary{background:#146F6C;color:#fff}
+    .btn-primary:hover{background:#0F5754}
+    input,select{width:100%;border:1px solid #D0C4AE;border-radius:12px;padding:12px 13px;background:#fff;color:#241F16;font:inherit;outline:0}
+    input:focus,select:focus{border-color:#146F6C;box-shadow:0 0 0 3px rgba(20,111,108,.15)}
+
+    /* Item tiles (informational only — not clickable, no donor detail) */
+    .item-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+    .item-tile{background:#fff;border:1px solid #E4DCCD;border-radius:16px;padding:18px}
+    .item-tile .it-name{font-size:.9rem;font-weight:800;color:#241F16}
+    .item-tile .it-qty{font-size:1.5rem;font-weight:850;margin-top:8px}
+    .item-tile .it-label{font-size:.76rem;color:#6B5D45;margin-top:1px}
+    .bar-track{background:#F3EEE5;border-radius:999px;height:7px;margin-top:10px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:999px;background:#2F7A5C}
+    .item-tile.needed .it-qty{color:#8A5A0B}
+    .item-tile.needed .bar-fill{background:#D98E04}
+    .item-tile.met .it-qty{color:#256648}
+    .item-tile .met-pill{display:inline-block;margin-top:8px;font-size:.72rem;font-weight:800;color:#256648;background:#EAF5EF;border-radius:999px;padding:3px 9px}
+
+    .state{padding:38px 12px;text-align:center;color:#6B5D45}
+    .error{color:#b42318;background:#fff5f4;border:1px solid #fecdca;border-radius:12px;padding:14px}
+    .skeleton{height:130px;border-radius:15px;background:linear-gradient(90deg,#F3EEE5 25%,#E4DCCD 37%,#F3EEE5 63%);background-size:400% 100%;animation:shine 1.3s infinite}
+    @keyframes shine{to{background-position:-400% 0}}
+    .hidden{display:none !important}
+
+    /* Pledge Donation modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(36,31,22,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
+    .modal{background:#fff;border-radius:20px;padding:26px;width:min(520px,100%);max-height:92vh;overflow-y:auto}
+    .modal h3{margin:0 0 4px;font-size:1.3rem;letter-spacing:-.02em}
+    .modal .sub{color:#6B5D45;font-size:.85rem;margin:0 0 18px}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:.82rem;font-weight:700;color:#4E4433;margin-bottom:5px}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+    .form-msg{font-size:.85rem;border-radius:10px;padding:10px 12px;margin-bottom:14px}
+    .form-msg.err{background:#fff5f4;color:#b42318;border:1px solid #fecdca}
+    .form-msg.ok{background:#EAF5EF;color:#256648;border:1px solid #C7E5D3}
+
+    @media(max-width:760px){.topbar{padding-bottom:10px}.row2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="wrap topbar"><a class="brand" href="index.html">Nyati Elan Cultural Forum</a><a class="back" href="app.html">Open community hub →</a></header>
+  <main class="wrap">
+    <section class="intro"><div class="eyebrow">Community seva</div><h1>Annadan</h1><p>See what's still needed for the community feast, and pledge what you can bring.</p></section>
+    <section class="panel" aria-live="polite">
+      <div class="toolbar">
+        <span class="stat-line" id="overall-stat">Loading requirements…</span>
+        <button type="button" class="btn btn-primary" onclick="openPledgeModal()"><span>＋</span> Pledge Donation</button>
+      </div>
+      <p class="note">🙏 Annadan is anonymous — donor details aren't shown publicly, only overall quantities.</p>
+
+      <div id="item-tiles" class="item-tiles"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+    </section>
+  </main>
+
+  <!-- Pledge Donation Modal -->
+  <div id="pledge-modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>Pledge a Donation</h3>
+      <p class="sub">Let us know what you can bring for Annadan seva.</p>
+      <div id="form-msg" class="hidden"></div>
+      <form id="pledge-form" onsubmit="submitPledge(event)">
+        <div class="field">
+          <label for="f-name">Name *</label>
+          <input id="f-name" type="text" required>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-mobile">Mobile Number</label>
+            <input id="f-mobile" type="tel" placeholder="WhatsApp number preferred">
+          </div>
+          <div class="field">
+            <label for="f-item">Item *</label>
+            <select id="f-item" required><option value="">Select an item</option></select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-building">Building *</label>
+            <input id="f-building" type="text" placeholder="e.g. B1" required>
+          </div>
+          <div class="field">
+            <label for="f-flat">Flat Number *</label>
+            <input id="f-flat" type="text" placeholder="e.g. 402" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-qty">Quantity (KG) *</label>
+          <input id="f-qty" type="number" min="0.1" step="0.1" placeholder="e.g. 5" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" style="background:#F3EEE5;color:#4E4433" onclick="closePledgeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn">Submit Pledge</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
+    const CACHE_KEY='nyati-annadan-v2', CACHE_TTL=60000;
+    let items=[]; // requirement rows only: {item, required, received, stillNeeded} — no donor details, ever
+    const $=id=>document.getElementById(id);
+    const clean=value=>String(value??'').trim();
+    function headerIndex(headers,tests){return headers.findIndex(h=>tests.some(test=>h.includes(test)))}
+    function normal(value){return clean(value).toLowerCase()}
+    function escapeHtml(value){return clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+    function num(value){const n=parseFloat(value);return isNaN(n)?0:n}
+    function fmtKg(n){return `${Number(n)%1===0?Number(n):Number(n).toFixed(1)} kg`}
+
+    function parseItemRows(rows){
+      if(!Array.isArray(rows)||rows.length<2)return [];
+      const headers=rows[0].map(normal);
+      const idx={item:headerIndex(headers,['item']),required:headerIndex(headers,['required']),received:headerIndex(headers,['received']),stillNeeded:headerIndex(headers,['still needed','remaining'])};
+      return rows.slice(1).map(row=>({item:clean(row[idx.item]),required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
+    }
+
+    function renderItemTiles(){
+      const totalRequired=items.reduce((a,i)=>a+i.required,0);
+      const totalReceived=items.reduce((a,i)=>a+i.received,0);
+      $('overall-stat').textContent=items.length?`${fmtKg(totalReceived)} received of ${fmtKg(totalRequired)} needed, across ${items.length} item${items.length===1?'':'s'}`:'No Annadan requirements listed yet.';
+
+      $('item-tiles').innerHTML=items.length?items.map(it=>{
+        const met=it.stillNeeded<=0 && it.required>0;
+        const pct=it.required>0?Math.min(100,Math.round((it.received/it.required)*100)):0;
+        return `
+        <div class="item-tile ${met?'met':'needed'}">
+          <div class="it-name">${escapeHtml(it.item)}</div>
+          <div class="it-qty">${fmtKg(it.received)}</div>
+          <div class="it-label">of ${fmtKg(it.required)} needed</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          ${met?'<span class="met-pill">Fully met ✓</span>':`<div class="it-label" style="margin-top:6px">${fmtKg(it.stillNeeded)} still needed</div>`}
+        </div>`;
+      }).join(''):'<div class="state" style="grid-column:1/-1">No items listed yet. Ask an admin to add rows to the Annadan sheet.</div>';
+    }
+
+    function populateItemSelect(){
+      $('f-item').innerHTML='<option value="">Select an item</option>'+
+        items.map(it=>`<option value="${escapeHtml(it.item)}">${escapeHtml(it.item)}${it.stillNeeded>0?` (${fmtKg(it.stillNeeded)} still needed)`:' (fully met)'}</option>`).join('');
+    }
+    function openPledgeModal(){
+      $('pledge-modal-overlay').classList.remove('hidden');
+      $('form-msg').classList.add('hidden');
+      populateItemSelect();
+    }
+    function closePledgeModal(){
+      $('pledge-modal-overlay').classList.add('hidden');
+      $('pledge-form').reset();
+    }
+
+    async function submitPledge(evt){
+      evt.preventDefault();
+      const name=clean($('f-name').value), mobile=clean($('f-mobile').value), building=clean($('f-building').value), flat=clean($('f-flat').value), item=clean($('f-item').value), quantity=parseFloat($('f-qty').value);
+      const msg=$('form-msg');
+      if(!name||!building||!flat||!item||!quantity||quantity<=0){
+        msg.className='form-msg err';msg.textContent='Please fill Name, Building, Flat, Item and a valid Quantity.';msg.classList.remove('hidden');
+        return;
+      }
+      const submitBtn=$('submit-btn');
+      submitBtn.disabled=true;submitBtn.textContent='Saving…';
+      try{
+        const response=await fetch(API_URL,{
+          method:'POST',
+          headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({action:'addAnnadanResponse',payload:{ name, mobile, building, flat, item, quantity }})
+        });
+        const result=await response.json();
+        if(result.status!=='success') throw new Error(result.message||'Could not save pledge.');
+        localStorage.removeItem(CACHE_KEY);
+        msg.className='form-msg ok';msg.textContent='Thank you! Refreshing the totals…';msg.classList.remove('hidden');
+        await load({force:true});
+        setTimeout(closePledgeModal,900);
+      }catch(err){
+        msg.className='form-msg err';msg.textContent='Could not save pledge. Please try again.';msg.classList.remove('hidden');
+        console.error(err);
+      }finally{
+        submitBtn.disabled=false;submitBtn.textContent='Submit Pledge';
+      }
+    }
+
+    async function load(opts){
+      opts=opts||{};
+      try{
+        if(!opts.force){
+          const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+          if(cached&&Date.now()-cached.time<CACHE_TTL){items=cached.items;renderItemTiles();return}
+        }
+        const response=await fetch(`${API_URL}?action=getAllData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
+        const payload=await response.json();
+        items=parseItemRows(payload?.data?.annadanItems||[]);
+        localStorage.setItem(CACHE_KEY,JSON.stringify({time:Date.now(),items}));
+        renderItemTiles();
+      }catch(error){$('item-tiles').innerHTML='<div class="error" style="grid-column:1/-1">Annadan data could not be loaded. Please try again in a moment.</div>';$('overall-stat').textContent='Could not connect';console.error(error)}
+    }
+    load();
+  </script>
+</body>
+</html>
