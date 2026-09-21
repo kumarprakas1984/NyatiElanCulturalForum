@@ -250,7 +250,7 @@
           const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
           if(cached&&Date.now()-cached.time<CACHE_TTL){items=cached.items;renderItemTiles();return}
         }
-        const response=await fetch(`${API_URL}?action=getAllData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
+        const response=await fetch(`${API_URL}?action=getAnnadanData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
         const payload=await response.json();
         items=parseItemRows(payload?.data?.annadanItems||[]);
         localStorage.setItem(CACHE_KEY,JSON.stringify({time:Date.now(),items}));
