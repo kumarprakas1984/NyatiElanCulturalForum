@@ -1907,15 +1907,18 @@
 
         function renderBuildingTiles() {
             const grid = document.getElementById('building-tiles-grid');
-            const tiles = Object.keys(BUILDINGS).map(name => {
-                const residentsInBuilding = allResidents.filter(r => r.building === name);
+            // "Other" (vendor / non-resident contributions) is admin-only for now —
+            // excluded from this public-facing view entirely, including the overall counts.
+            const publicResidents = allResidents.filter(r => r.building !== 'Other');
+            const tiles = Object.keys(BUILDINGS).filter(name => name !== 'Other').map(name => {
+                const residentsInBuilding = publicResidents.filter(r => r.building === name);
                 const total = residentsInBuilding.reduce((a, r) => a + (r.status === 'Paid' ? r.amount : 0), 0);
                 const paidCount = residentsInBuilding.filter(r => r.status === 'Paid').length;
                 return { name, total, paidCount, recordedCount: residentsInBuilding.length };
             });
 
-            const overallPaidCount = allResidents.filter(r => r.status === 'Paid').length;
-            const overallUnpaidCount = allResidents.filter(r => r.status !== 'Paid').length;
+            const overallPaidCount = publicResidents.filter(r => r.status === 'Paid').length;
+            const overallUnpaidCount = publicResidents.filter(r => r.status !== 'Paid').length;
             document.getElementById('overall-paid-count').textContent = overallPaidCount;
             document.getElementById('overall-unpaid-count').textContent = overallUnpaidCount;
 
