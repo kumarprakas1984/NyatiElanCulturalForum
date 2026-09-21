@@ -551,7 +551,7 @@ function saveParticipant(payload) {
 
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = getOrCreateSheet(ss, CONFIG.SHEETS.PARTICIPATION, [
-    'Entry Date', 'Name', 'Building', 'Flat', 'Event', 'Song', 'Any Other Specific Req.'
+    'Entry Date', 'Name', 'Mobile', 'Building', 'Flat', 'Event', 'Song', 'Any Other Specific Req.'
   ]);
 
   const lastCol = Math.max(sheet.getLastColumn(), 1);
@@ -565,11 +565,20 @@ function saveParticipant(payload) {
 
   const colDate = findCol(['entry date', 'date', 'timestamp']);
   const colName = findCol(['name']);
+  let colMobile = findCol(['mobile', 'phone', 'contact']);
   const colBuilding = findCol(['building']);
   const colFlat = findCol(['flat']);
   const colEvent = findCol(['event']);
   const colSong = findCol(['song']);
   const colNotes = findCol(['any other', 'requirement', 'req', 'notes']);
+
+  // Older Participation sheets (created before this field) won't have a Mobile column yet — add it.
+  if (colMobile === -1) {
+    const newColIndex = sheet.getLastColumn() + 1;
+    sheet.getRange(1, newColIndex).setValue('Mobile');
+    headers.push('mobile');
+    colMobile = newColIndex - 1;
+  }
 
   const numCols = Math.max(headers.length, sheet.getLastColumn());
   const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
@@ -578,6 +587,7 @@ function saveParticipant(payload) {
     const row = new Array(numCols).fill('');
     if (colDate !== -1) row[colDate] = timestamp;
     if (colName !== -1) row[colName] = payload.name;
+    if (colMobile !== -1) row[colMobile] = payload.mobile || '';
     if (colBuilding !== -1) row[colBuilding] = payload.building;
     if (colFlat !== -1) row[colFlat] = payload.flat;
     if (colEvent !== -1) row[colEvent] = entry.event;
