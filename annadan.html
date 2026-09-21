@@ -65,23 +65,48 @@
   </style>
 </head>
 <body>
-  <header class="wrap topbar"><a class="brand" href="index.html">Nyati Elan Cultural Forum</a><a class="back" href="app.html">Open community hub →</a></header>
+  <header class="wrap topbar">
+    <a class="brand" href="index.html">Nyati Elan Cultural Forum</a>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span id="admin-status" class="back hidden"></span>
+      <button type="button" id="admin-signin-link" class="back" style="background:none;border:none;cursor:pointer;font:inherit" onclick="openAdminLogin()">Admin sign-in</button>
+      <a class="back" href="app.html">Open community hub →</a>
+    </div>
+  </header>
   <main class="wrap">
     <section class="intro"><div class="eyebrow">Community seva</div><h1>Annadan</h1><p>See what's still needed for the community feast, and pledge what you can bring.</p></section>
     <section class="panel" aria-live="polite">
       <div class="toolbar">
         <span class="stat-line" id="overall-stat">Loading requirements…</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" class="btn btn-outline" onclick="downloadItemsExcel()"><span>⬇</span> Excel</button>
-          <button type="button" class="btn btn-outline" onclick="downloadItemsPdf()"><span>⬇</span> PDF</button>
+          <button type="button" class="btn btn-outline" onclick="downloadItemsExcel()"><span>⬇</span> Summary (Excel)</button>
+          <button type="button" class="btn btn-outline" onclick="downloadItemsPdf()"><span>⬇</span> Summary (PDF)</button>
           <button type="button" class="btn btn-primary" onclick="openPledgeModal()"><span>＋</span> Pledge Donation</button>
         </div>
       </div>
-      <p class="note">🙏 Annadan is anonymous — donor details aren't shown publicly (or in downloads), only overall quantities.</p>
+      <div id="admin-download-row" class="toolbar hidden" style="margin-top:-6px">
+        <span class="stat-line">🔒 Admin: donor-level detail (not shown publicly)</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-outline" onclick="downloadDetailExcel()"><span>⬇</span> Detail (Excel)</button>
+          <button type="button" class="btn btn-outline" onclick="downloadDetailPdf()"><span>⬇</span> Detail (PDF)</button>
+        </div>
+      </div>
+      <p class="note">🙏 Annadan is anonymous — donor details aren't shown publicly (or in the Summary download), only overall quantities.</p>
 
       <div id="item-tiles" class="item-tiles"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
     </section>
   </main>
+
+  <!-- Admin Sign-In Modal -->
+  <div id="admin-login-overlay" class="modal-overlay hidden">
+    <div class="modal" style="width:min(380px,100%);text-align:center">
+      <h3>Admin Sign-In</h3>
+      <p class="sub">Sign in with your admin Google account to download donor-level Annadan details.</p>
+      <div id="admin-gsi-button" style="display:flex;justify-content:center;margin:10px 0"></div>
+      <div id="admin-login-msg" class="hidden"></div>
+      <button type="button" class="btn" style="background:#F3EEE5;color:#4E4433;margin-top:10px" onclick="closeAdminLogin()">Cancel</button>
+    </div>
+  </div>
 
   <!-- Pledge Donation Modal -->
   <div id="pledge-modal-overlay" class="modal-overlay hidden">
@@ -126,12 +151,17 @@
     </div>
   </div>
 
+  <script src="https://accounts.google.com/gsi/client"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
     const CACHE_KEY='nyati-annadan-v2', CACHE_TTL=60000;
+    const ADMIN_CLIENT_ID='939061030612-0buu96811vujgankod2cmcjf2t8bc9ih.apps.googleusercontent.com';
+    let adminEmail=null;          // set only after the backend confirms this email is a registered admin
+    let annadanDetailRows=[];     // donor-level pledge rows — only ever populated post sign-in, never public
+    let gsiInitialized=false;
     let items=[]; // requirement rows only: {item, required, received, stillNeeded} — no donor details, ever
     const $=id=>document.getElementById(id);
     const clean=value=>String(value??'').trim();
@@ -241,6 +271,89 @@
         headStyles:{fillColor:[20,111,108]}
       });
       doc.save('annadan-requirements.pdf');
+    }
+
+    // ---- Admin sign-in (Google Identity Services) ----
+    function jwt_decode(token){
+      const base64Url=token.split('.')[1];
+      const base64=base64Url.replace(/-/g,'+').replace(/_/g,'/');
+      const jsonPayload=decodeURIComponent(atob(base64).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+      return JSON.parse(jsonPayload);
+    }
+    function ensureGsiInitialized(){
+      if(gsiInitialized||!window.google?.accounts?.id) return;
+      google.accounts.id.initialize({ client_id: ADMIN_CLIENT_ID, callback: handleAdminCredentialResponse, auto_select: false });
+      google.accounts.id.renderButton(document.getElementById('admin-gsi-button'), { theme:'outline', size:'large', text:'signin_with' });
+      gsiInitialized=true;
+    }
+    function openAdminLogin(){
+      $('admin-login-msg').classList.add('hidden');
+      $('admin-login-overlay').classList.remove('hidden');
+      ensureGsiInitialized();
+    }
+    function closeAdminLogin(){
+      $('admin-login-overlay').classList.add('hidden');
+    }
+    async function handleAdminCredentialResponse(response){
+      const msg=$('admin-login-msg');
+      try{
+        const decoded=jwt_decode(response.credential);
+        const email=(decoded?.email||'').trim().toLowerCase();
+        const apiResponse=await fetch(`${API_URL}?action=getAnnadanResponses&email=${encodeURIComponent(email)}`,{cache:'no-store'});
+        const result=await apiResponse.json();
+        if(result.status!=='success') throw new Error(result.message||'Not authorized as admin.');
+        annadanDetailRows=parsePledgeRows(result?.data?.annadanResponses||[]);
+        adminEmail=email;
+        closeAdminLogin();
+        $('admin-signin-link').classList.add('hidden');
+        $('admin-status').textContent=`Admin: ${email}`;
+        $('admin-status').classList.remove('hidden');
+        $('admin-download-row').classList.remove('hidden');
+      }catch(err){
+        msg.className='form-msg err';msg.textContent=err.message||'This Google account is not a registered admin.';msg.classList.remove('hidden');
+        console.error(err);
+      }
+    }
+    function parsePledgeRows(rows){
+      if(!Array.isArray(rows)||rows.length<2)return [];
+      const headers=rows[0].map(normal);
+      const idx={date:headerIndex(headers,['response time','timestamp','time']),name:headerIndex(headers,['name']),mobile:headerIndex(headers,['mobile','phone','contact']),building:headerIndex(headers,['building']),flat:headerIndex(headers,['flat']),item:headerIndex(headers,['item']),qty:headerIndex(headers,['quantity','qty'])};
+      return rows.slice(1).map(row=>({date:clean(row[idx.date]),name:clean(row[idx.name]),mobile:clean(row[idx.mobile]),building:clean(row[idx.building]),flat:clean(row[idx.flat]),item:clean(row[idx.item]),quantity:num(row[idx.qty])})).filter(p=>p.name||p.item);
+    }
+
+    // ---- Admin-only donor-level detail export ----
+    const DETAIL_COLUMNS=[
+      {key:'date',header:'Response Time'},
+      {key:'name',header:'Name'},
+      {key:'mobile',header:'Mobile'},
+      {key:'building',header:'Building'},
+      {key:'flat',header:'Flat'},
+      {key:'item',header:'Item'},
+      {key:'quantity',header:'Quantity (KG)'}
+    ];
+    function downloadDetailExcel(){
+      if(!annadanDetailRows.length){alert('No pledges recorded yet.');return}
+      const data=[DETAIL_COLUMNS.map(c=>c.header),...annadanDetailRows.map(r=>DETAIL_COLUMNS.map(c=>r[c.key]))];
+      const ws=XLSX.utils.aoa_to_sheet(data);
+      ws['!cols']=DETAIL_COLUMNS.map(c=>({wch:Math.max(c.header.length+2,14)}));
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'Annadan Pledges');
+      XLSX.writeFile(wb,'annadan-donor-details.xlsx');
+    }
+    function downloadDetailPdf(){
+      if(!annadanDetailRows.length){alert('No pledges recorded yet.');return}
+      const {jsPDF}=window.jspdf;
+      const doc=new jsPDF({orientation:'landscape'});
+      doc.setFontSize(14);
+      doc.text('Annadan — Donor Details (Admin Only)',14,15);
+      doc.autoTable({
+        startY:20,
+        head:[DETAIL_COLUMNS.map(c=>c.header)],
+        body:annadanDetailRows.map(r=>DETAIL_COLUMNS.map(c=>r[c.key])),
+        styles:{fontSize:9,cellPadding:3},
+        headStyles:{fillColor:[20,111,108]}
+      });
+      doc.save('annadan-donor-details.pdf');
     }
 
     async function load(opts){
