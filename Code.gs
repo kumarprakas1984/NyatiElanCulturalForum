@@ -396,13 +396,18 @@ function saveOrUpdateResident(payload) {
 
   let targetRowIndex = -1;
 
-  // Search for existing resident by Building and Flat (starting from row index 1 to skip header)
-  for (let i = 1; i < data.length; i++) {
-    const currentBuilding = colBuilding !== -1 ? String(data[i][colBuilding]).trim().toUpperCase() : '';
-    const currentFlat = colFlat !== -1 ? String(data[i][colFlat]).trim() : '';
-    if (currentBuilding === targetBuilding && currentFlat === targetFlat) {
-      targetRowIndex = i + 1; // 1-based index for SpreadsheetApp
-      break;
+  // "Other" (vendor / non-resident) contributions always create a new row —
+  // never matched against a prior entry, since the same vendor can give more than once
+  // and each contribution should be its own record.
+  if (targetBuilding !== 'OTHER') {
+    // Search for existing resident by Building and Flat (starting from row index 1 to skip header)
+    for (let i = 1; i < data.length; i++) {
+      const currentBuilding = colBuilding !== -1 ? String(data[i][colBuilding]).trim().toUpperCase() : '';
+      const currentFlat = colFlat !== -1 ? String(data[i][colFlat]).trim() : '';
+      if (currentBuilding === targetBuilding && currentFlat === targetFlat) {
+        targetRowIndex = i + 1; // 1-based index for SpreadsheetApp
+        break;
+      }
     }
   }
 
