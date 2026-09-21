@@ -201,6 +201,15 @@ function doGet(e) {
       return createJsonResponse({ status: 'success', data: { annadanItems: annadanValues } });
     }
 
+    // Full donor-level Annadan pledges (Name, Mobile, Building, Flat, Item, Quantity) —
+    // deliberately NOT part of getAnnadanData/getAllData (donations are anonymous to
+    // the public). Only returned here after a server-side admin-email check.
+    if (action === 'getAnnadanResponses') {
+      const email = e && e.parameter && e.parameter.email;
+      const rows = getAnnadanResponsesForAdmin(email);
+      return createJsonResponse({ status: 'success', data: { annadanResponses: rows } });
+    }
+
     if (action === 'ping') {
       return createJsonResponse({ 
         status: 'success', 
@@ -630,6 +639,45 @@ function findAnnadanResponseSheet(ss) {
   }
   return null;
 }
+
+/**
+ * Server-side check that an email belongs to a registered admin (reads the
+ * Admins sheet directly, the same source of truth app.html's admin list
+ * comes from) — this is a real backend gate, not just a client-side hide.
+ */
+function isRegisteredAdminEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return false;
+
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const adminSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.ADMINS) || getSheetCaseInsensitive(ss, 'Admin');
+  if (!adminSheet) return false;
+
+  const adminValues = adminSheet.getDataRange().getDisplayValues();
+  for (let i = 0; i < adminValues.length; i++) {
+    for (let j = 0; j < adminValues[i].length; j++) {
+      const cell = String(adminValues[i][j] || '').trim().toLowerCase();
+      if (cell === normalizedEmail) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns full Annadan pledge rows (donor name, mobile, building, flat, item,
+ * quantity) — only after verifying the given email is a registered admin.
+ * Throws otherwise, so the caller never silently gets partial/empty data
+ * confused with "not authorized".
+ */
+function getAnnadanResponsesForAdmin(email) {
+  if (!isRegisteredAdminEmail(email)) {
+    throw new Error('Not authorized. Only registered admins can view Annadan donor details.');
+  }
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const responseSheet = findAnnadanResponseSheet(ss);
+  return responseSheet ? responseSheet.getDataRange().getDisplayValues() : [];
+}
+
 
 /**
  * Same lookup as findAnnadanResponseSheet, but creates the canonical
