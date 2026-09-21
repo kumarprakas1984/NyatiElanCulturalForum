@@ -981,6 +981,10 @@
             "B18": { floors: 12, flatsPerFloor: 4 },
             "E1": { floors: 12, flatsPerFloor: 8 },
             "F3": { floors: 12, flatsPerFloor: 6 },
+            // Not a physical building — used to record vendor / other contributions
+            // that aren't tied to any resident flat. floors: 0 signals generateFlatGrid()
+            // to render its special add-entry view instead of a flat grid.
+            "Other": { floors: 0, flatsPerFloor: 0 },
         };
 
         const BUILDING_REGIONS = {
@@ -2105,7 +2109,7 @@
             accessibleBuildings.forEach(name => {
                 const option = document.createElement('option');
                 option.value = name;
-                option.textContent = `Building ${name}`;
+                option.textContent = name === 'Other' ? 'Other (Vendor / Non-Resident Contributions)' : `Building ${name}`;
                 buildingSelect.appendChild(option);
             });
             const accessNote = document.getElementById('admin-building-access-note');
@@ -2126,7 +2130,11 @@
 
         function getAccessibleBuildings() {
             const region = getAdminRegion();
-            return Object.keys(BUILDINGS).filter(name => !region || region === 'BOTH' || (BUILDING_REGIONS[name] || 'SE') === region);
+            const buildings = Object.keys(BUILDINGS).filter(name => !region || region === 'BOTH' || (BUILDING_REGIONS[name] || 'SE') === region);
+            // "Other" (vendor contributions) isn't tied to a physical zone, so every
+            // admin can access it regardless of their region assignment.
+            if (BUILDINGS['Other'] && buildings.indexOf('Other') === -1) buildings.push('Other');
+            return buildings;
         }
 
         function canAccessBuilding(buildingName) {
@@ -2179,6 +2187,59 @@
             const buildingLayout = BUILDINGS[buildingName];
             if (!buildingLayout) {
                 container.innerHTML = '<p class="text-gray-500">Building layout not defined.</p>';
+                return;
+            }
+
+            // "Other" isn't a real building with numbered flats — render existing
+            // vendor / non-resident entries plus a button to add a new one.
+            if (buildingName === 'Other') {
+                heading.innerText = `Vendor / Other Contributions ${isUnpaidFilterActive ? '(Filtered: Unpaid Only)' : ''}`;
+                container.innerHTML = '';
+
+                const addBtnHtml = `
+                    <button id="add-vendor-entry-btn" type="button"
+                        class="w-full mb-4 p-4 rounded-xl border-2 border-dashed border-indigo-300 text-indigo-600 font-semibold hover:bg-indigo-50 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-plus"></i> Add Vendor / Other Contribution
+                    </button>
+                `;
+
+                let entries = Object.entries(communityData['Other']?.residents || {});
+                if (isUnpaidFilterActive) {
+                    entries = entries.filter(([, r]) => (r.status || '').toLowerCase() !== 'paid');
+                }
+                // Newest first
+                entries.sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+
+                if (entries.length === 0) {
+                    container.innerHTML = addBtnHtml + `
+                        <div class="text-center py-8">
+                            <p class="text-gray-500 text-sm">No vendor / other contributions recorded yet.</p>
+                        </div>
+                    `;
+                } else {
+                    const cardsHtml = entries.map(([key, r]) => {
+                        const statusClass = (r.status || 'unpaid').toLowerCase();
+                        const amountText = r.amount ? `₹${parseFloat(r.amount).toLocaleString('en-IN')}` : '₹0';
+                        return `
+                            <div class="flat-btn ${statusClass} p-3.5 rounded-xl text-left shadow-sm cursor-default">
+                                <span class="font-bold text-base md:text-lg block truncate">${escapeHtml(r.name || 'Unnamed vendor')}</span>
+                                <span class="block text-xs font-normal opacity-85 mt-0.5">${amountText} · ${escapeHtml(r.status || 'Unpaid')}</span>
+                                <div class="status-dot"></div>
+                            </div>
+                        `;
+                    }).join('');
+                    const grid = document.createElement('div');
+                    grid.innerHTML = addBtnHtml;
+                    const gridInner = document.createElement('div');
+                    gridInner.className = 'flat-grid';
+                    gridInner.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+                    gridInner.innerHTML = cardsHtml;
+                    grid.appendChild(gridInner);
+                    container.appendChild(grid);
+                }
+
+                const addBtn = document.getElementById('add-vendor-entry-btn');
+                if (addBtn) addBtn.addEventListener('click', openVendorContributionModal);
                 return;
             }
 
@@ -2279,6 +2340,21 @@
 
             // Search through all accessible building flats
             getAccessibleBuildings().forEach(bName => {
+                if (bName === 'Other') {
+                    // Vendor entries aren't numbered flats — match by name/phone only.
+                    Object.entries(communityData['Other']?.residents || {}).forEach(([flatKey, resident]) => {
+                        const resName = (resident?.name || '').toLowerCase();
+                        const resPhone = (resident?.phone || '').replace(/[^0-9]/g, '');
+                        const resStatus = resident?.status || 'Empty';
+                        const matchesName = resName.includes(currentSearchQuery.toLowerCase());
+                        const matchesPhone = resPhone.includes(currentSearchQuery.replace(/[^0-9]/g, ''));
+                        if (matchesName || matchesPhone) {
+                            if (isUnpaidFilterActive && resStatus.toLowerCase() === 'paid') return;
+                            matchingFlats.push({ building: 'Other', flat: flatKey, resident, status: resStatus });
+                        }
+                    });
+                    return;
+                }
                 const bLayout = BUILDINGS[bName];
                 for (let floor = 1; floor <= bLayout.floors; floor++) {
                     for (let flatNum = 1; flatNum <= bLayout.flatsPerFloor; flatNum++) {
@@ -2513,6 +2589,14 @@
         }
 
         // --- RESIDENT MODAL & WHATSAPP RECEIPT LOGIC ---
+        function openVendorContributionModal() {
+            // A fresh, unique key each time — combined with the backend always
+            // appending for building "Other", this guarantees a brand-new row
+            // per vendor contribution rather than editing a prior one.
+            const vendorKey = `VEND-${Date.now().toString(36).toUpperCase()}`;
+            openResidentModal('Other', vendorKey);
+        }
+
         function openResidentModal(building, flat) {
             try {
                 if (!canAccessBuilding(building)) {
@@ -2522,7 +2606,21 @@
                 const modal = document.getElementById('resident-modal');
                 const resident = communityData[building]?.residents[flat];
 
-                document.getElementById('modal-title').innerText = `Flat ${building}-${flat} Details`;
+                document.getElementById('modal-title').innerText = building === 'Other'
+                    ? 'Vendor / Other Contribution'
+                    : `Flat ${building}-${flat} Details`;
+
+                // "Other" entries are vendor / non-resident contributions — relabel the
+                // form accordingly; every other building uses the normal resident wording.
+                const nameLabel = document.querySelector('label[for="resident-name"]');
+                const nameInputEl = document.getElementById('resident-name');
+                if (building === 'Other') {
+                    if (nameLabel) nameLabel.innerText = 'Vendor / Payee Name';
+                    if (nameInputEl) nameInputEl.placeholder = 'e.g. Sharma Caterers';
+                } else {
+                    if (nameLabel) nameLabel.innerText = 'Resident Name';
+                    if (nameInputEl) nameInputEl.placeholder = 'Full name of resident';
+                }
 
                 // Populate 2025 Historical Contribution
                 const prev2025El = document.getElementById('modal-prev-2025');
@@ -2589,6 +2687,9 @@
                 document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
                 document.getElementById('comments').value = '';
                 document.getElementById('comments').placeholder = prevAmountNum > 0 ? 'Optional note for this new payment' : 'Optional notes or transaction UTR number';
+                if (building === 'Other') {
+                    document.getElementById('comments').placeholder = 'What was this contribution for?';
+                }
                 document.getElementById('resident-building').value = building;
                 document.getElementById('resident-flat').value = flat;
 
