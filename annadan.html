@@ -24,6 +24,8 @@
     .btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;font-size:.9rem;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:.15s}
     .btn-primary{background:#146F6C;color:#fff}
     .btn-primary:hover{background:#0F5754}
+    .btn-outline{background:#fff;color:#146F6C;border:1px solid #146F6C}
+    .btn-outline:hover{background:#EAF6F5}
     input,select{width:100%;border:1px solid #D0C4AE;border-radius:12px;padding:12px 13px;background:#fff;color:#241F16;font:inherit;outline:0}
     input:focus,select:focus{border-color:#146F6C;box-shadow:0 0 0 3px rgba(20,111,108,.15)}
 
@@ -69,9 +71,13 @@
     <section class="panel" aria-live="polite">
       <div class="toolbar">
         <span class="stat-line" id="overall-stat">Loading requirements…</span>
-        <button type="button" class="btn btn-primary" onclick="openPledgeModal()"><span>＋</span> Pledge Donation</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-outline" onclick="downloadItemsExcel()"><span>⬇</span> Excel</button>
+          <button type="button" class="btn btn-outline" onclick="downloadItemsPdf()"><span>⬇</span> PDF</button>
+          <button type="button" class="btn btn-primary" onclick="openPledgeModal()"><span>＋</span> Pledge Donation</button>
+        </div>
       </div>
-      <p class="note">🙏 Annadan is anonymous — donor details aren't shown publicly, only overall quantities.</p>
+      <p class="note">🙏 Annadan is anonymous — donor details aren't shown publicly (or in downloads), only overall quantities.</p>
 
       <div id="item-tiles" class="item-tiles"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
     </section>
@@ -120,6 +126,9 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
     const CACHE_KEY='nyati-annadan-v2', CACHE_TTL=60000;
@@ -200,6 +209,38 @@
       }finally{
         submitBtn.disabled=false;submitBtn.textContent='Submit Pledge';
       }
+    }
+
+    // ---- Excel / PDF export (requirements summary only — no donor data) ----
+    const ITEM_COLUMNS=[
+      {key:'item',header:'Item'},
+      {key:'required',header:'Quantity Required (KG)'},
+      {key:'received',header:'Quantity Received (KG)'},
+      {key:'stillNeeded',header:'Quantity Still Needed (KG)'}
+    ];
+    function downloadItemsExcel(){
+      if(!items.length){alert('No items to export yet.');return}
+      const data=[ITEM_COLUMNS.map(c=>c.header),...items.map(it=>ITEM_COLUMNS.map(c=>it[c.key]))];
+      const ws=XLSX.utils.aoa_to_sheet(data);
+      ws['!cols']=ITEM_COLUMNS.map(c=>({wch:Math.max(c.header.length+2,16)}));
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'Annadan Items');
+      XLSX.writeFile(wb,'annadan-requirements.xlsx');
+    }
+    function downloadItemsPdf(){
+      if(!items.length){alert('No items to export yet.');return}
+      const {jsPDF}=window.jspdf;
+      const doc=new jsPDF();
+      doc.setFontSize(14);
+      doc.text('Annadan Requirements',14,15);
+      doc.autoTable({
+        startY:20,
+        head:[ITEM_COLUMNS.map(c=>c.header)],
+        body:items.map(it=>ITEM_COLUMNS.map(c=>it[c.key])),
+        styles:{fontSize:9,cellPadding:3},
+        headStyles:{fillColor:[20,111,108]}
+      });
+      doc.save('annadan-requirements.pdf');
     }
 
     async function load(opts){
