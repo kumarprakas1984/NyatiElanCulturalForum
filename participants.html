@@ -192,10 +192,6 @@
     </div>
   </div>
 
-  <script src="https://accounts.google.com/gsi/client"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
     const CACHE_KEY='nyati-participants-v3', CACHE_TTL=120000;
@@ -203,6 +199,28 @@
     const ADMIN_SESSION_KEY='nyati-admin-session'; // shared with app.html / annadan.html
     let isAdmin=false;
     let gsiInitialized=false;
+    // Lazy-load heavy/rarely-needed scripts only when actually used, instead of
+    // blocking every visitor's initial page load on Google Sign-In + Excel/PDF libs.
+    const _loadedScripts={};
+    function loadScript(src){
+      if(_loadedScripts[src]) return _loadedScripts[src];
+      _loadedScripts[src]=new Promise((resolve,reject)=>{
+        const s=document.createElement('script');
+        s.src=src; s.onload=()=>resolve(); s.onerror=()=>reject(new Error('Failed to load '+src));
+        document.head.appendChild(s);
+      });
+      return _loadedScripts[src];
+    }
+    async function ensureXlsxLoaded(){
+      if(!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    }
+    async function ensurePdfLoaded(){
+      if(!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      if(!window.jspdf?.jsPDF?.API?.autoTable) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    }
+    async function loadGsiScript(){
+      if(!window.google?.accounts?.id) await loadScript('https://accounts.google.com/gsi/client');
+    }
     // Each item in `participants` is one row = one participant registered for one event
     // (the Participation sheet stores one row per event selected, since a
     // performer's song can differ between Singing and Dancing).
@@ -374,14 +392,16 @@
       });
       doc.save(filename);
     }
-    function downloadEventExcel(){
+    async function downloadEventExcel(){
       if(!isAdmin){alert('Admin sign-in required to download participant data.');return}
       if(!currentFilteredList.length){alert('No participants to export for this event.');return}
+      await ensureXlsxLoaded();
       exportRowsToExcel(currentFilteredList,PARTICIPANT_COLUMNS,`${safeFilename(currentEventFilter)}-participants.xlsx`,safeFilename(currentEventFilter).slice(0,31));
     }
-    function downloadEventPdf(){
+    async function downloadEventPdf(){
       if(!isAdmin){alert('Admin sign-in required to download participant data.');return}
       if(!currentFilteredList.length){alert('No participants to export for this event.');return}
+      await ensurePdfLoaded();
       exportRowsToPdf(currentFilteredList,PARTICIPANT_COLUMNS,`${currentEventFilter} — Participants`,`${safeFilename(currentEventFilter)}-participants.pdf`);
     }
     // ---- Admin gate for downloads (they contain mobile numbers) ----
@@ -415,9 +435,10 @@
       google.accounts.id.renderButton(document.getElementById('admin-gsi-button'), { theme:'outline', size:'large', text:'signin_with' });
       gsiInitialized=true;
     }
-    function openAdminLogin(){
+    async function openAdminLogin(){
       $('admin-login-msg').classList.add('hidden');
       $('admin-login-overlay').classList.remove('hidden');
+      await loadGsiScript();
       ensureGsiInitialized();
     }
     function closeAdminLogin(){
@@ -470,9 +491,10 @@
       }
     }
 
-    function downloadAllExcel(){
+    async function downloadAllExcel(){
       if(!isAdmin){alert('Admin sign-in required to download participant data.');return}
       if(!participants.length){alert('No registrations to export yet.');return}
+      await ensureXlsxLoaded();
       exportRowsToExcel(participants,PARTICIPANT_COLUMNS,'all-participants.xlsx','All Participants');
     }
 
