@@ -274,6 +274,27 @@
     }
 
     // ---- Admin sign-in (Google Identity Services) ----
+    // Shared cross-page session (same origin as app.html) — lets a sign-in on
+    // app.html be recognized here automatically. This page still calls the
+    // backend's getAnnadanResponses check every time before showing anything,
+    // since that's the only real gate for sensitive donor data; the stored
+    // session just avoids repeating the sign-in click.
+    const ADMIN_SESSION_KEY='nyati-admin-session';
+    function getStoredAdminSession(){
+      try{
+        const raw=localStorage.getItem(ADMIN_SESSION_KEY);
+        if(!raw) return null;
+        const parsed=JSON.parse(raw);
+        if(!parsed?.email||!parsed?.exp||Date.now()>parsed.exp) return null;
+        return parsed;
+      }catch(e){ return null; }
+    }
+    function saveAdminSession(email,name,expSeconds){
+      try{ localStorage.setItem(ADMIN_SESSION_KEY,JSON.stringify({email,name:name||email,exp:(expSeconds||0)*1000})); }catch(e){ /* no-op */ }
+    }
+    function clearAdminSession(){
+      try{ localStorage.removeItem(ADMIN_SESSION_KEY); }catch(e){ /* no-op */ }
+    }
     function jwt_decode(token){
       const base64Url=token.split('.')[1];
       const base64=base64Url.replace(/-/g,'+').replace(/_/g,'/');
@@ -294,21 +315,45 @@
     function closeAdminLogin(){
       $('admin-login-overlay').classList.add('hidden');
     }
+    function applyAdminAccess(email,name,rows){
+      annadanDetailRows=parsePledgeRows(rows||[]);
+      adminEmail=email;
+      $('admin-signin-link').classList.add('hidden');
+      $('admin-status').innerHTML=`Admin: ${escapeHtml(name||email)} &nbsp;·&nbsp; <button type="button" onclick="signOutAdmin()" style="background:none;border:none;color:inherit;text-decoration:underline;cursor:pointer;font:inherit">Sign out</button>`;
+      $('admin-status').classList.remove('hidden');
+      $('admin-download-row').classList.remove('hidden');
+    }
+    function signOutAdmin(){
+      adminEmail=null;
+      annadanDetailRows=[];
+      clearAdminSession();
+      $('admin-signin-link').classList.remove('hidden');
+      $('admin-status').classList.add('hidden');
+      $('admin-download-row').classList.add('hidden');
+    }
+    async function verifyAdminEmail(email){
+      const apiResponse=await fetch(`${API_URL}?action=getAnnadanResponses&email=${encodeURIComponent(email)}`,{cache:'no-store'});
+      return apiResponse.json();
+    }
+    async function tryRestoreAdminSession(){
+      const session=getStoredAdminSession();
+      if(!session) return;
+      try{
+        const result=await verifyAdminEmail(session.email);
+        if(result.status!=='success'){ clearAdminSession(); return; }
+        applyAdminAccess(session.email,session.name,result?.data?.annadanResponses);
+      }catch(e){ /* silent — user can still sign in manually */ }
+    }
     async function handleAdminCredentialResponse(response){
       const msg=$('admin-login-msg');
       try{
         const decoded=jwt_decode(response.credential);
         const email=(decoded?.email||'').trim().toLowerCase();
-        const apiResponse=await fetch(`${API_URL}?action=getAnnadanResponses&email=${encodeURIComponent(email)}`,{cache:'no-store'});
-        const result=await apiResponse.json();
+        const result=await verifyAdminEmail(email);
         if(result.status!=='success') throw new Error(result.message||'Not authorized as admin.');
-        annadanDetailRows=parsePledgeRows(result?.data?.annadanResponses||[]);
-        adminEmail=email;
+        saveAdminSession(email,decoded?.name,decoded?.exp);
+        applyAdminAccess(email,decoded?.name,result?.data?.annadanResponses);
         closeAdminLogin();
-        $('admin-signin-link').classList.add('hidden');
-        $('admin-status').textContent=`Admin: ${email}`;
-        $('admin-status').classList.remove('hidden');
-        $('admin-download-row').classList.remove('hidden');
       }catch(err){
         msg.className='form-msg err';msg.textContent=err.message||'This Google account is not a registered admin.';msg.classList.remove('hidden');
         console.error(err);
