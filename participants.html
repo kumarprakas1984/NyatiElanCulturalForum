@@ -77,14 +77,21 @@
   </style>
 </head>
 <body>
-  <header class="wrap topbar"><a class="brand" href="index.html">Nyati Elan Cultural Forum</a><a class="back" href="app.html">Open community hub →</a></header>
+  <header class="wrap topbar">
+    <a class="brand" href="index.html">Nyati Elan Cultural Forum</a>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span id="admin-status" class="back hidden"></span>
+      <button type="button" id="admin-signin-link" class="back" style="background:none;border:none;cursor:pointer;font:inherit" onclick="openAdminLogin()">Admin sign-in</button>
+      <a class="back" href="app.html">Open community hub →</a>
+    </div>
+  </header>
   <main class="wrap">
     <section class="intro"><div class="eyebrow">Cultural activities</div><h1>Participation list</h1><p>Browse registrations by event, or add a new participant.</p></section>
     <section class="panel" aria-live="polite">
       <div class="toolbar">
         <span class="stat-line" id="overall-stat">Loading registrations…</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" class="btn btn-outline" onclick="downloadAllExcel()"><span>⬇</span> Download All (Excel)</button>
+          <button type="button" id="download-all-btn" class="btn btn-outline hidden" onclick="downloadAllExcel()"><span>⬇</span> Download All (Excel)</button>
           <button type="button" class="btn btn-primary" onclick="openAddModal()"><span>＋</span> Add Entry</button>
         </div>
       </div>
@@ -99,8 +106,8 @@
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <button type="button" class="btn btn-ghost" onclick="showEventTiles()">← Back to events</button>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button type="button" class="btn btn-outline" onclick="downloadEventExcel()"><span>⬇</span> Excel</button>
-            <button type="button" class="btn btn-outline" onclick="downloadEventPdf()"><span>⬇</span> PDF</button>
+            <button type="button" id="download-event-excel-btn" class="btn btn-outline hidden" onclick="downloadEventExcel()"><span>⬇</span> Excel</button>
+            <button type="button" id="download-event-pdf-btn" class="btn btn-outline hidden" onclick="downloadEventPdf()"><span>⬇</span> PDF</button>
             <button type="button" class="btn btn-primary" onclick="openAddModal(currentEventFilter)"><span>＋</span> Add Entry</button>
           </div>
         </div>
@@ -115,6 +122,17 @@
       </div>
     </section>
   </main>
+
+  <!-- Admin Sign-In Modal -->
+  <div id="admin-login-overlay" class="modal-overlay hidden">
+    <div class="modal" style="width:min(380px,100%);text-align:center">
+      <h3>Admin Sign-In</h3>
+      <p class="sub">Sign in with your admin Google account to download participant lists (they include mobile numbers).</p>
+      <div id="admin-gsi-button" style="display:flex;justify-content:center;margin:10px 0"></div>
+      <div id="admin-login-msg" class="hidden"></div>
+      <button type="button" class="btn" style="background:#F3EEE5;color:#4E4433;margin-top:10px" onclick="closeAdminLogin()">Cancel</button>
+    </div>
+  </div>
 
   <!-- Add Entry Modal -->
   <div id="add-modal-overlay" class="modal-overlay hidden">
@@ -174,12 +192,17 @@
     </div>
   </div>
 
+  <script src="https://accounts.google.com/gsi/client"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
     const CACHE_KEY='nyati-participants-v3', CACHE_TTL=120000;
+    const ADMIN_CLIENT_ID='939061030612-0buu96811vujgankod2cmcjf2t8bc9ih.apps.googleusercontent.com';
+    const ADMIN_SESSION_KEY='nyati-admin-session'; // shared with app.html / annadan.html
+    let isAdmin=false;
+    let gsiInitialized=false;
     // Each item in `participants` is one row = one participant registered for one event
     // (the Participation sheet stores one row per event selected, since a
     // performer's song can differ between Singing and Dancing).
@@ -352,17 +375,108 @@
       doc.save(filename);
     }
     function downloadEventExcel(){
+      if(!isAdmin){alert('Admin sign-in required to download participant data.');return}
       if(!currentFilteredList.length){alert('No participants to export for this event.');return}
       exportRowsToExcel(currentFilteredList,PARTICIPANT_COLUMNS,`${safeFilename(currentEventFilter)}-participants.xlsx`,safeFilename(currentEventFilter).slice(0,31));
     }
     function downloadEventPdf(){
+      if(!isAdmin){alert('Admin sign-in required to download participant data.');return}
       if(!currentFilteredList.length){alert('No participants to export for this event.');return}
       exportRowsToPdf(currentFilteredList,PARTICIPANT_COLUMNS,`${currentEventFilter} — Participants`,`${safeFilename(currentEventFilter)}-participants.pdf`);
     }
+    // ---- Admin gate for downloads (they contain mobile numbers) ----
+    // Shared cross-page session: a sign-in on app.html or annadan.html is
+    // recognized here too, but this page always re-verifies with the backend
+    // before revealing the download buttons — never trusts the stored flag alone.
+    function getStoredAdminSession(){
+      try{
+        const raw=localStorage.getItem(ADMIN_SESSION_KEY);
+        if(!raw) return null;
+        const parsed=JSON.parse(raw);
+        if(!parsed?.email||!parsed?.exp||Date.now()>parsed.exp) return null;
+        return parsed;
+      }catch(e){ return null; }
+    }
+    function saveAdminSession(email,name,expSeconds){
+      try{ localStorage.setItem(ADMIN_SESSION_KEY,JSON.stringify({email,name:name||email,exp:(expSeconds||0)*1000})); }catch(e){ /* no-op */ }
+    }
+    function clearAdminSession(){
+      try{ localStorage.removeItem(ADMIN_SESSION_KEY); }catch(e){ /* no-op */ }
+    }
+    function jwt_decode(token){
+      const base64Url=token.split('.')[1];
+      const base64=base64Url.replace(/-/g,'+').replace(/_/g,'/');
+      const jsonPayload=decodeURIComponent(atob(base64).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+      return JSON.parse(jsonPayload);
+    }
+    function ensureGsiInitialized(){
+      if(gsiInitialized||!window.google?.accounts?.id) return;
+      google.accounts.id.initialize({ client_id: ADMIN_CLIENT_ID, callback: handleAdminCredentialResponse, auto_select: false });
+      google.accounts.id.renderButton(document.getElementById('admin-gsi-button'), { theme:'outline', size:'large', text:'signin_with' });
+      gsiInitialized=true;
+    }
+    function openAdminLogin(){
+      $('admin-login-msg').classList.add('hidden');
+      $('admin-login-overlay').classList.remove('hidden');
+      ensureGsiInitialized();
+    }
+    function closeAdminLogin(){
+      $('admin-login-overlay').classList.add('hidden');
+    }
+    function applyAdminAccess(email,name){
+      isAdmin=true;
+      $('admin-signin-link').classList.add('hidden');
+      $('admin-status').innerHTML=`Admin: ${escapeHtml(name||email)} &nbsp;·&nbsp; <button type="button" onclick="signOutAdmin()" style="background:none;border:none;color:inherit;text-decoration:underline;cursor:pointer;font:inherit">Sign out</button>`;
+      $('admin-status').classList.remove('hidden');
+      $('download-all-btn').classList.remove('hidden');
+      $('download-event-excel-btn').classList.remove('hidden');
+      $('download-event-pdf-btn').classList.remove('hidden');
+    }
+    function signOutAdmin(){
+      isAdmin=false;
+      clearAdminSession();
+      $('admin-signin-link').classList.remove('hidden');
+      $('admin-status').classList.add('hidden');
+      $('download-all-btn').classList.add('hidden');
+      $('download-event-excel-btn').classList.add('hidden');
+      $('download-event-pdf-btn').classList.add('hidden');
+    }
+    async function checkAdminEmail(email){
+      const response=await fetch(`${API_URL}?action=checkAdmin&email=${encodeURIComponent(email)}`,{cache:'no-store'});
+      return response.json();
+    }
+    async function tryRestoreAdminSession(){
+      const session=getStoredAdminSession();
+      if(!session) return;
+      try{
+        const result=await checkAdminEmail(session.email);
+        if(result.status!=='success'||!result?.data?.isAdmin){ clearAdminSession(); return; }
+        applyAdminAccess(session.email,session.name);
+      }catch(e){ /* silent — user can still sign in manually */ }
+    }
+    async function handleAdminCredentialResponse(response){
+      const msg=$('admin-login-msg');
+      try{
+        const decoded=jwt_decode(response.credential);
+        const email=(decoded?.email||'').trim().toLowerCase();
+        const result=await checkAdminEmail(email);
+        if(result.status!=='success'||!result?.data?.isAdmin) throw new Error('This Google account is not a registered admin.');
+        saveAdminSession(email,decoded?.name,decoded?.exp);
+        applyAdminAccess(email,decoded?.name);
+        closeAdminLogin();
+      }catch(err){
+        msg.className='form-msg err';msg.textContent=err.message||'This Google account is not a registered admin.';msg.classList.remove('hidden');
+        console.error(err);
+      }
+    }
+
     function downloadAllExcel(){
+      if(!isAdmin){alert('Admin sign-in required to download participant data.');return}
       if(!participants.length){alert('No registrations to export yet.');return}
       exportRowsToExcel(participants,PARTICIPANT_COLUMNS,'all-participants.xlsx','All Participants');
     }
+
+    tryRestoreAdminSession();
 
     async function load(opts){
       opts=opts||{};
