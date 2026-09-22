@@ -7,6 +7,9 @@ on:
       - 'apps-script/**'
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -28,7 +31,26 @@ jobs:
         run: echo "$CLASPRC" > "$HOME/clasprc.json"
 
       - name: Push to Apps Script
+        id: clasp_push
         working-directory: apps-script
         env:
           clasp_config_auth: /home/runner/clasprc.json
-        run: clasp push -f
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          { clasp --version; echo "---"; clasp push -f; } 2>&1 | tee /tmp/clasp-output.log
+
+      - name: Save debug log (temporary)
+        if: always()
+        run: |
+          cp /tmp/clasp-output.log deploy-debug.log || echo "no log produced" > deploy-debug.log
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add deploy-debug.log
+          git diff --cached --quiet || git commit -m "Debug log from run ${{ github.run_id }}"
+          git push || echo "nothing to push"
+
+      - name: Fail if push failed
+        if: steps.clasp_push.outcome == 'failure'
+        run: exit 1
