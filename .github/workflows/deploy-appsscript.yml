@@ -25,8 +25,10 @@ jobs:
       - name: Restore clasp credentials
         env:
           CLASPRC: ${{ secrets.APP_SCRIPT }}
-        run: echo "$CLASPRC" > ~/.clasprc.json
+        run: echo "$CLASPRC" > "$HOME/clasprc.json"
 
       - name: Push to Apps Script
         working-directory: apps-script
+        env:
+          clasp_config_auth: /home/runner/clasprc.json
         run: clasp push -f
