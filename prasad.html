@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0F5754">
+  <title>Prasad Seva • Nyati Elan Cultural Forum</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#241F16;background:#FAF8F4}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
+    .wrap{width:min(900px,calc(100% - 28px));margin:auto}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0}
+    .brand{font-weight:850;color:#241F16;text-decoration:none}
+    .back{color:#146F6C;text-decoration:none;font-weight:700;font-size:.9rem}
+    .intro{padding:10px 0 22px}
+    .eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;color:#146F6C}
+    .intro h1{font-size:clamp(1.8rem,5vw,2.6rem);letter-spacing:-.05em;margin:10px 0 8px}
+    .intro p{color:#6B5D45;margin:0;line-height:1.6}
+    .day-section{margin-bottom:22px}
+    .day-heading{font-size:.95rem;font-weight:800;color:#241F16;margin-bottom:10px}
+    .period-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .period-tile{background:#fff;border:1px solid #E4DCCD;border-radius:16px;padding:16px;text-align:left;cursor:pointer;transition:.15s;font:inherit;color:inherit}
+    .period-tile:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(20,111,108,.15);border-color:#9FD5D1}
+    .period-tile .p-name{font-size:.8rem;font-weight:800;color:#146F6C;text-transform:uppercase;letter-spacing:.05em}
+    .period-tile .p-count{font-size:1.6rem;font-weight:850;margin-top:6px;color:#241F16}
+    .period-tile .p-label{font-size:.76rem;color:#6B5D45;margin-top:1px}
+    .state{padding:38px 12px;text-align:center;color:#6B5D45}
+    .error{color:#b42318;background:#fff5f4;border:1px solid #fecdca;border-radius:12px;padding:14px}
+    .skeleton{height:90px;border-radius:16px;background:linear-gradient(90deg,#F3EEE5 25%,#E4DCCD 37%,#F3EEE5 63%);background-size:400% 100%;animation:shine 1.3s infinite}
+    @keyframes shine{to{background-position:-400% 0}}
+    .hidden{display:none !important}
+
+    .modal-overlay{position:fixed;inset:0;background:rgba(36,31,22,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
+    .modal{background:#fff;border-radius:20px;padding:26px;width:min(460px,100%);max-height:92vh;overflow-y:auto}
+    .modal h3{margin:0 0 4px;font-size:1.2rem;letter-spacing:-.02em}
+    .modal .sub{color:#6B5D45;font-size:.85rem;margin:0 0 18px}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:.82rem;font-weight:700;color:#4E4433;margin-bottom:5px}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    input{width:100%;border:1px solid #D0C4AE;border-radius:12px;padding:12px 13px;background:#fff;color:#241F16;font:inherit;outline:0}
+    input:focus{border-color:#146F6C;box-shadow:0 0 0 3px rgba(20,111,108,.15)}
+    .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+    .btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;font-size:.9rem;font-family:inherit}
+    .btn-primary{background:#146F6C;color:#fff}
+    .btn-primary:hover{background:#0F5754}
+    .form-msg{font-size:.85rem;border-radius:10px;padding:10px 12px;margin-bottom:14px}
+    .form-msg.err{background:#fff5f4;color:#b42318;border:1px solid #fecdca}
+    .form-msg.ok{background:#EAF5EF;color:#256648;border:1px solid #C7E5D3}
+    @media(max-width:600px){.row2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="wrap topbar"><a class="brand" href="index.html">Nyati Elan Cultural Forum</a><a class="back" href="app.html">Open community hub →</a></header>
+  <main class="wrap">
+    <section class="intro"><div class="eyebrow">Durga Puja seva</div><h1>Prasad Seva</h1><p>Sign up to help with morning or evening Prasad on any day.</p></section>
+    <section id="days-container"><div class="skeleton"></div></section>
+  </main>
+
+  <div id="add-modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>Register for Prasad Seva</h3>
+      <p class="sub" id="modal-sub"></p>
+      <div id="form-msg" class="hidden"></div>
+      <form id="add-form" onsubmit="submitRegistration(event)">
+        <div class="field">
+          <label for="f-name">Name *</label>
+          <input id="f-name" type="text" required>
+        </div>
+        <div class="field">
+          <label for="f-mobile">Mobile Number *</label>
+          <input id="f-mobile" type="tel" placeholder="WhatsApp number preferred" required>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-building">Building *</label>
+            <input id="f-building" type="text" placeholder="e.g. B1" required>
+          </div>
+          <div class="field">
+            <label for="f-flat">Flat Number *</label>
+            <input id="f-flat" type="text" placeholder="e.g. 402" required>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" style="background:#F3EEE5;color:#4E4433" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn">Register</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
+    const $=id=>document.getElementById(id);
+    const clean=value=>String(value??'').trim();
+    const escapeHtml=value=>clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    let currentDate=null, currentPeriod=null;
+
+    function displayDate(iso){
+      const d=new Date(iso+'T00:00:00');
+      return d.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+    }
+
+    function renderDays(dates,counts){
+      const container=$('days-container');
+      if(!dates.length){
+        container.innerHTML='<div class="state">No Prasad dates configured yet. Ask an admin to set them in the Config sheet.</div>';
+        return;
+      }
+      container.innerHTML=dates.map(date=>`
+        <div class="day-section">
+          <div class="day-heading">${displayDate(date)}</div>
+          <div class="period-grid">
+            ${['Morning','Evening'].map(period=>{
+              const count=counts[`${date}|${period}`]||0;
+              return `
+              <button type="button" class="period-tile" data-date="${date}" data-period="${period}">
+                <div class="p-name">${period}</div>
+                <div class="p-count">${count}</div>
+                <div class="p-label">${count===1?'person':'people'} registered</div>
+              </button>`;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.period-tile').forEach(btn=>{
+        btn.addEventListener('click',()=>openModal(btn.dataset.date,btn.dataset.period));
+      });
+    }
+
+    function openModal(date,period){
+      currentDate=date; currentPeriod=period;
+      $('modal-sub').textContent=`${displayDate(date)} — ${period}`;
+      $('form-msg').classList.add('hidden');
+      $('add-modal-overlay').classList.remove('hidden');
+    }
+    function closeModal(){
+      $('add-modal-overlay').classList.add('hidden');
+      $('add-form').reset();
+    }
+
+    async function submitRegistration(evt){
+      evt.preventDefault();
+      const name=clean($('f-name').value), mobile=clean($('f-mobile').value), building=clean($('f-building').value), flat=clean($('f-flat').value);
+      const msg=$('form-msg');
+      if(!name||!mobile||!building||!flat){
+        msg.className='form-msg err';msg.textContent='Please fill in all fields.';msg.classList.remove('hidden');
+        return;
+      }
+      const submitBtn=$('submit-btn');
+      submitBtn.disabled=true;submitBtn.textContent='Saving…';
+      try{
+        const response=await fetch(API_URL,{
+          method:'POST',
+          headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({action:'addPrasadRegistration',payload:{ name, mobile, building, flat, date:currentDate, period:currentPeriod }})
+        });
+        const result=await response.json();
+        if(result.status!=='success') throw new Error(result.message||'Could not save registration.');
+        msg.className='form-msg ok';msg.textContent='Registered! Thank you.';msg.classList.remove('hidden');
+        await load();
+        setTimeout(closeModal,900);
+      }catch(err){
+        msg.className='form-msg err';msg.textContent=err.message||'Could not save registration. Please try again.';msg.classList.remove('hidden');
+        console.error(err);
+      }finally{
+        submitBtn.disabled=false;submitBtn.textContent='Register';
+      }
+    }
+
+    async function load(){
+      try{
+        const response=await fetch(`${API_URL}?action=getPrasadData`,{cache:'no-store'});
+        const result=await response.json();
+        if(result.status!=='success') throw new Error(result.message);
+        renderDays(result?.data?.dates||[],result?.data?.counts||{});
+      }catch(e){
+        $('days-container').innerHTML='<div class="error">Prasad seva data could not be loaded. Please try again in a moment.</div>';
+        console.error(e);
+      }
+    }
+    load();
+  </script>
+</body>
+</html>
