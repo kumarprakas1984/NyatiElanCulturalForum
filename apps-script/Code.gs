@@ -14,6 +14,10 @@ const CONFIG = {
     EVENTS: 'Events',
     PARTICIPATION: 'Participation',
     ANNADAN: 'Annadan',
+    CONFIG: 'Config',
+    STALLS: 'Stall Registration',
+    PRASAD: 'Prasad Registration',
+    SARI: 'Sari Registration',
     SUMMARY: 'Summary',
     ADMINS: 'Admins'
   },
@@ -220,6 +224,29 @@ function doGet(e) {
       return createJsonResponse({ status: 'success', data: { isAdmin: isAdmin } });
     }
 
+    // Lightweight read for the Stalls registration form — pulls only the
+    // available stall dates (Config sheet rows where Item = STALL), not the
+    // whole Config sheet or any other dataset.
+    if (action === 'getStallData') {
+      const stallDates = getStallDatesFromConfig();
+      return createJsonResponse({ status: 'success', data: { stallDates: stallDates } });
+    }
+
+    // Prasad seva: date range (from Config) + per (date, period) registration
+    // counts only — no names/mobiles exposed publicly.
+    if (action === 'getPrasadData') {
+      const data = getPrasadData();
+      return createJsonResponse({ status: 'success', data: data });
+    }
+
+    // Sari seva: date range (from Config) + which (date, period) slots are
+    // already claimed (boolean only, no sponsor identity) + the unlock time,
+    // for UI purposes. The real enforcement happens in addSariRegistration.
+    if (action === 'getSariData') {
+      const data = getSariData();
+      return createJsonResponse({ status: 'success', data: data });
+    }
+
     if (action === 'ping') {
       return createJsonResponse({ 
         status: 'success', 
@@ -273,6 +300,24 @@ function doPost(e) {
     if (action === 'addAnnadanResponse' || action === 'donateAnnadan') {
       const payload = request.payload;
       const resultMessage = saveAnnadanResponse(payload);
+      return createJsonResponse({ status: 'success', data: resultMessage });
+    }
+
+    if (action === 'addStallRegistration' || action === 'saveStallRegistration') {
+      const payload = request.payload;
+      const resultMessage = saveStallRegistration(payload);
+      return createJsonResponse({ status: 'success', data: resultMessage });
+    }
+
+    if (action === 'addPrasadRegistration' || action === 'savePrasadRegistration') {
+      const payload = request.payload;
+      const resultMessage = savePrasadRegistration(payload);
+      return createJsonResponse({ status: 'success', data: resultMessage });
+    }
+
+    if (action === 'addSariRegistration' || action === 'saveSariRegistration') {
+      const payload = request.payload;
+      const resultMessage = saveSariRegistration(payload);
       return createJsonResponse({ status: 'success', data: resultMessage });
     }
 
@@ -801,6 +846,333 @@ function recalculateAnnadanTotals(ss) {
     if (colReceived !== -1) annadanSheet.getRange(i + 1, colReceived + 1).setValue(received);
     if (colStillNeeded !== -1) annadanSheet.getRange(i + 1, colStillNeeded + 1).setValue(stillNeeded);
   }
+}
+
+/**
+ * Reads available stall dates from the Config sheet — rows where the Item
+ * column equals "STALL" (case-insensitive); the Value column of each such
+ * row is one available date. Multiple STALL rows = multiple available dates.
+ */
+function getStallDatesFromConfig() {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const configSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.CONFIG);
+  if (!configSheet) return [];
+
+  const values = configSheet.getDataRange().getDisplayValues();
+  if (values.length < 2) return [];
+
+  const headers = values[0].map(function(h) { return String(h).trim().toLowerCase(); });
+  const colItem = headers.findIndex(function(h) { return h.indexOf('item') !== -1; });
+  const colValue = headers.findIndex(function(h) { return h.indexOf('value') !== -1; });
+  if (colItem === -1 || colValue === -1) return [];
+
+  const dates = [];
+  for (let i = 1; i < values.length; i++) {
+    const item = String(values[i][colItem] || '').trim().toUpperCase();
+    if (item === 'STALL') {
+      const val = String(values[i][colValue] || '').trim();
+      if (val) dates.push(val);
+    }
+  }
+  // De-duplicate while preserving the order they appear in the sheet.
+  return dates.filter(function(d, idx) { return dates.indexOf(d) === idx; });
+}
+
+/**
+ * Saves a stall registration entry (name, mobile, stall date, resident/
+ * outsider, category, items, tables, power request, estimated amount).
+ */
+function saveStallRegistration(payload) {
+  if (!payload || !payload.name || !payload.mobile || !payload.stallDate || !payload.residentType || !payload.category || !payload.items || !payload.tables) {
+    throw new Error('Name, Mobile, Stall Date, Resident/Outsider, Category, Items and Tables are required.');
+  }
+
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = getOrCreateSheet(ss, CONFIG.SHEETS.STALLS, [
+    'Entry Date', 'Name', 'Mobile', 'Stall Date', 'Resident or Outsider', 'Category',
+    'Items', 'Tables Requested', '15A Power Requested', 'Estimated Amount (Rs.)'
+  ]);
+
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(function(h) {
+    return String(h).trim().toLowerCase();
+  });
+
+  function findCol(tests) {
+    return headers.findIndex(function(h) { return tests.some(function(t) { return h.indexOf(t) !== -1; }); });
+  }
+
+  const colDate = findCol(['entry date', 'timestamp']);
+  const colName = findCol(['name']);
+  const colMobile = findCol(['mobile', 'phone', 'contact']);
+  const colStallDate = findCol(['stall date']);
+  const colType = findCol(['resident', 'outsider', 'type']);
+  const colCategory = findCol(['category']);
+  const colItems = findCol(['items']);
+  const colTables = findCol(['tables']);
+  const colPower = findCol(['power']);
+  const colAmount = findCol(['amount']);
+
+  const numCols = Math.max(headers.length, sheet.getLastColumn());
+  const row = new Array(numCols).fill('');
+  const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+  if (colDate !== -1) row[colDate] = timestamp;
+  if (colName !== -1) row[colName] = payload.name;
+  if (colMobile !== -1) row[colMobile] = payload.mobile;
+  if (colStallDate !== -1) row[colStallDate] = payload.stallDate;
+  if (colType !== -1) row[colType] = payload.residentType;
+  if (colCategory !== -1) row[colCategory] = payload.category;
+  if (colItems !== -1) row[colItems] = payload.items;
+  if (colTables !== -1) row[colTables] = Number(payload.tables) || 1;
+  if (colPower !== -1) row[colPower] = payload.powerRequested ? 'Yes' : 'No';
+  if (colAmount !== -1) row[colAmount] = Number(payload.estimatedAmount) || 0;
+
+  sheet.appendRow(row);
+
+  return `Stall registered for ${payload.name} on ${payload.stallDate}`;
+}
+
+// ===================================================================================
+// Durga Puja seva: Prasad and Sari registration
+// ===================================================================================
+
+// Non-admin Sari registration doesn't open until this moment (IST). Admins can
+// register earlier — enforced here on the backend, not just hidden in the UI.
+const SARI_UNLOCK_TIMESTAMP = new Date('2026-10-04T00:00:01+05:30');
+
+/**
+ * Reads a single value from the Config sheet (Item/Value pairs) by exact
+ * item name, using getValues() rather than getDisplayValues() so a real
+ * Sheets date cell comes back as a native Date object for arithmetic.
+ */
+function getConfigValue(itemName) {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const configSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.CONFIG);
+  if (!configSheet) return null;
+
+  const values = configSheet.getDataRange().getValues();
+  if (values.length < 2) return null;
+
+  const headers = values[0].map(function(h) { return String(h).trim().toLowerCase(); });
+  const colItem = headers.findIndex(function(h) { return h.indexOf('item') !== -1; });
+  const colValue = headers.findIndex(function(h) { return h.indexOf('value') !== -1; });
+  if (colItem === -1 || colValue === -1) return null;
+
+  const target = String(itemName).trim().toLowerCase();
+  for (let i = 1; i < values.length; i++) {
+    const item = String(values[i][colItem] || '').trim().toLowerCase();
+    if (item === target) return values[i][colValue];
+  }
+  return null;
+}
+
+function toDateObject(value) {
+  if (value instanceof Date) return value;
+  if (!value) return null;
+  const parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+// Canonical key format used both as the tile identifier and the value stored
+// in the registration sheets, e.g. "2026-10-11".
+function formatDateKey(date) {
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+/**
+ * Builds the inclusive list of date keys between two Config-sheet date
+ * values (e.g. "Prasad Start Date" / "Prasad End Date").
+ */
+function getDateRangeList(startItem, endItem) {
+  const start = toDateObject(getConfigValue(startItem));
+  const end = toDateObject(getConfigValue(endItem));
+  if (!start || !end) return [];
+
+  const dates = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  while (cursor <= endDay) {
+    dates.push(formatDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
+}
+
+/**
+ * Prasad seva: returns the configured date range plus a count of existing
+ * registrations per (date, period) — counts only, no registrant identity.
+ */
+function getPrasadData() {
+  const dates = getDateRangeList('Prasad Start Date', 'Prasad End Date');
+
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.PRASAD);
+  const counts = {};
+
+  if (sheet) {
+    const values = sheet.getDataRange().getDisplayValues();
+    if (values.length > 1) {
+      const headers = values[0].map(function(h) { return String(h).trim().toLowerCase(); });
+      const colDate = headers.findIndex(function(h) { return h.indexOf('prasad date') !== -1 || h.indexOf('date') !== -1; });
+      const colPeriod = headers.findIndex(function(h) { return h.indexOf('period') !== -1; });
+      for (let i = 1; i < values.length; i++) {
+        const d = String(values[i][colDate] || '').trim();
+        const p = String(values[i][colPeriod] || '').trim();
+        if (!d || !p) continue;
+        const key = d + '|' + p;
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    }
+  }
+
+  return { dates: dates, counts: counts };
+}
+
+/**
+ * Saves a Prasad seva registration — always appends (many people can sign up
+ * for the same date/period), no uniqueness constraint.
+ */
+function savePrasadRegistration(payload) {
+  if (!payload || !payload.name || !payload.mobile || !payload.building || !payload.flat || !payload.date || !payload.period) {
+    throw new Error('Name, Mobile, Building, Flat, Date and Period are required.');
+  }
+
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = getOrCreateSheet(ss, CONFIG.SHEETS.PRASAD, [
+    'Entry Date', 'Name', 'Mobile', 'Building', 'Flat', 'Prasad Date', 'Period'
+  ]);
+
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(function(h) {
+    return String(h).trim().toLowerCase();
+  });
+
+  function findCol(tests) {
+    return headers.findIndex(function(h) { return tests.some(function(t) { return h.indexOf(t) !== -1; }); });
+  }
+
+  const colDate = findCol(['entry date', 'timestamp']);
+  const colName = findCol(['name']);
+  const colMobile = findCol(['mobile', 'phone', 'contact']);
+  const colBuilding = findCol(['building']);
+  const colFlat = findCol(['flat']);
+  const colPrasadDate = findCol(['prasad date', 'date']);
+  const colPeriod = findCol(['period']);
+
+  const numCols = Math.max(headers.length, sheet.getLastColumn());
+  const row = new Array(numCols).fill('');
+  const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+  if (colDate !== -1) row[colDate] = timestamp;
+  if (colName !== -1) row[colName] = payload.name;
+  if (colMobile !== -1) row[colMobile] = payload.mobile;
+  if (colBuilding !== -1) row[colBuilding] = payload.building;
+  if (colFlat !== -1) row[colFlat] = payload.flat;
+  if (colPrasadDate !== -1) row[colPrasadDate] = payload.date;
+  if (colPeriod !== -1) row[colPeriod] = payload.period;
+
+  sheet.appendRow(row);
+
+  return `Registered ${payload.name} for Prasad seva on ${payload.date} (${payload.period})`;
+}
+
+/**
+ * Sari seva: returns the configured date range, which (date, period) slots
+ * are already claimed (boolean only — no sponsor identity), and the unlock
+ * timestamp for the UI to display a countdown/lock message.
+ */
+function getSariData() {
+  const dates = getDateRangeList('Sari Start Date', 'Sari End Date');
+
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.SARI);
+  const claimed = {};
+
+  if (sheet) {
+    const values = sheet.getDataRange().getDisplayValues();
+    if (values.length > 1) {
+      const headers = values[0].map(function(h) { return String(h).trim().toLowerCase(); });
+      const colDate = headers.findIndex(function(h) { return h.indexOf('sari date') !== -1 || h.indexOf('date') !== -1; });
+      const colPeriod = headers.findIndex(function(h) { return h.indexOf('period') !== -1; });
+      for (let i = 1; i < values.length; i++) {
+        const d = String(values[i][colDate] || '').trim();
+        const p = String(values[i][colPeriod] || '').trim();
+        if (!d || !p) continue;
+        claimed[d + '|' + p] = true;
+      }
+    }
+  }
+
+  return { dates: dates, claimed: claimed, unlockAt: SARI_UNLOCK_TIMESTAMP.toISOString() };
+}
+
+/**
+ * Saves a Sari sponsorship — enforces both the midnight time-lock (bypassed
+ * only for a verified admin email) and the one-sponsor-per-slot rule, on the
+ * backend, so neither can be bypassed via the browser.
+ */
+function saveSariRegistration(payload) {
+  if (!payload || !payload.name || !payload.mobile || !payload.building || !payload.flat || !payload.date || !payload.period) {
+    throw new Error('Name, Mobile, Building, Flat, Date and Period are required.');
+  }
+
+  const isAdmin = payload.adminEmail ? isRegisteredAdminEmail(payload.adminEmail) : false;
+  if (!isAdmin && new Date() < SARI_UNLOCK_TIMESTAMP) {
+    throw new Error('Sari registration opens on 4 Oct 2026 at midnight.');
+  }
+
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = getOrCreateSheet(ss, CONFIG.SHEETS.SARI, [
+    'Entry Date', 'Name', 'Mobile', 'Building', 'Flat', 'Sari Date', 'Period', 'Color'
+  ]);
+
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(function(h) {
+    return String(h).trim().toLowerCase();
+  });
+
+  function findCol(tests) {
+    return headers.findIndex(function(h) { return tests.some(function(t) { return h.indexOf(t) !== -1; }); });
+  }
+
+  const colEntryDate = findCol(['entry date', 'timestamp']);
+  const colName = findCol(['name']);
+  const colMobile = findCol(['mobile', 'phone', 'contact']);
+  const colBuilding = findCol(['building']);
+  const colFlat = findCol(['flat']);
+  const colSariDate = findCol(['sari date', 'date']);
+  const colPeriod = findCol(['period']);
+  const colColor = findCol(['color']);
+
+  // Enforce "one entry per (date, period)" — reject if already claimed.
+  const existingValues = sheet.getDataRange().getDisplayValues();
+  if (existingValues.length > 1 && colSariDate !== -1 && colPeriod !== -1) {
+    for (let i = 1; i < existingValues.length; i++) {
+      const d = String(existingValues[i][colSariDate] || '').trim();
+      const p = String(existingValues[i][colPeriod] || '').trim();
+      if (d === payload.date && p === payload.period) {
+        throw new Error('This slot has already been claimed by someone else.');
+      }
+    }
+  }
+
+  const numCols = Math.max(headers.length, sheet.getLastColumn());
+  const row = new Array(numCols).fill('');
+  const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+  if (colEntryDate !== -1) row[colEntryDate] = timestamp;
+  if (colName !== -1) row[colName] = payload.name;
+  if (colMobile !== -1) row[colMobile] = payload.mobile;
+  if (colBuilding !== -1) row[colBuilding] = payload.building;
+  if (colFlat !== -1) row[colFlat] = payload.flat;
+  if (colSariDate !== -1) row[colSariDate] = payload.date;
+  if (colPeriod !== -1) row[colPeriod] = payload.period;
+  if (colColor !== -1) row[colColor] = payload.color || '';
+
+  sheet.appendRow(row);
+
+  return `Sari sponsorship registered for ${payload.date} (${payload.period})`;
 }
 
 /**
