@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0F5754">
+  <title>Stall Registration • Nyati Elan Cultural Forum</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#241F16;background:#FAF8F4}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
+    .wrap{width:min(720px,calc(100% - 28px));margin:auto}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0}
+    .brand{font-weight:850;color:#241F16;text-decoration:none}
+    .back{color:#146F6C;text-decoration:none;font-weight:700;font-size:.9rem}
+    .intro{padding:10px 0 22px}
+    .eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;color:#146F6C}
+    .intro h1{font-size:clamp(1.8rem,5vw,2.6rem);letter-spacing:-.05em;margin:10px 0 8px}
+    .intro p{color:#6B5D45;margin:0;line-height:1.6}
+    .panel{background:#fff;border:1px solid #E4DCCD;border-radius:20px;padding:24px;box-shadow:0 10px 30px rgba(36,31,22,.05);margin-bottom:40px}
+    input,select,textarea{width:100%;border:1px solid #D0C4AE;border-radius:12px;padding:12px 13px;background:#fff;color:#241F16;font:inherit;outline:0}
+    input:focus,select:focus,textarea:focus{border-color:#146F6C;box-shadow:0 0 0 3px rgba(20,111,108,.15)}
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:.85rem;font-weight:700;color:#4E4433;margin-bottom:6px}
+    .field .hint{font-size:.78rem;color:#6B5D45;margin-top:5px}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .radio-group{display:flex;gap:10px;flex-wrap:wrap}
+    .radio-item{flex:1;min-width:140px;display:flex;align-items:center;gap:8px;border:1px solid #D0C4AE;border-radius:10px;padding:11px 12px;font-size:.9rem;cursor:pointer}
+    .radio-item input{width:auto}
+    .radio-item.checked{border-color:#146F6C;background:#EAF6F5;color:#0F5754;font-weight:700}
+    .checkbox-row{display:flex;align-items:flex-start;gap:10px;border:1px solid #D0C4AE;border-radius:10px;padding:12px}
+    .checkbox-row input{width:auto;margin-top:3px}
+    .pricing-box{background:#FAF8F4;border:1px solid #E4DCCD;border-radius:14px;padding:16px;margin:20px 0}
+    .pricing-box .line{display:flex;justify-content:space-between;font-size:.88rem;color:#4E4433;padding:4px 0}
+    .pricing-box .line.total{border-top:1px solid #E4DCCD;margin-top:8px;padding-top:10px;font-weight:800;font-size:1.05rem;color:#146F6C}
+    .pricing-box .note{font-size:.78rem;color:#6B5D45;margin-top:8px;line-height:1.5}
+    .btn{border:none;border-radius:12px;padding:13px 20px;font-weight:800;cursor:pointer;font-size:.95rem;font-family:inherit;width:100%}
+    .btn-primary{background:#146F6C;color:#fff}
+    .btn-primary:hover{background:#0F5754}
+    .btn-primary:disabled{opacity:.6;cursor:not-allowed}
+    .form-msg{font-size:.85rem;border-radius:10px;padding:10px 12px;margin-bottom:14px}
+    .form-msg.err{background:#fff5f4;color:#b42318;border:1px solid #fecdca}
+    .form-msg.ok{background:#EAF5EF;color:#256648;border:1px solid #C7E5D3}
+    .hidden{display:none !important}
+    @media(max-width:600px){.row2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="wrap topbar"><a class="brand" href="index.html">Nyati Elan Cultural Forum</a><a class="back" href="app.html">Open community hub →</a></header>
+  <main class="wrap">
+    <section class="intro"><div class="eyebrow">Festive stalls</div><h1>Stall Registration</h1><p>Register your stall for an upcoming festive date.</p></section>
+
+    <section class="panel">
+      <div id="form-msg" class="hidden"></div>
+      <form id="stall-form" onsubmit="submitStall(event)">
+        <div class="field">
+          <label for="f-name">Name *</label>
+          <input id="f-name" type="text" required>
+        </div>
+        <div class="field">
+          <label for="f-mobile">Mobile Number *</label>
+          <input id="f-mobile" type="tel" placeholder="WhatsApp number preferred" required>
+        </div>
+        <div class="field">
+          <label for="f-date">Stall Date *</label>
+          <select id="f-date" required><option value="">Loading dates…</option></select>
+        </div>
+        <div class="field">
+          <label>Society Resident or Outsider? *</label>
+          <div class="radio-group" id="type-group">
+            <label class="radio-item"><input type="radio" name="type" value="Resident"> Society Resident (₹600)</label>
+            <label class="radio-item"><input type="radio" name="type" value="Outsider"> Outsider (₹1000)</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-category">Stall Category *</label>
+          <select id="f-category" required>
+            <option value="">Select a category</option>
+            <option>Food</option>
+            <option>Jewellery</option>
+            <option>Clothes</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-items">Items to be Sold / Served *</label>
+          <textarea id="f-items" rows="2" placeholder="e.g. Pani puri, dahi puri, cold drinks" required></textarea>
+        </div>
+        <div class="field">
+          <label for="f-tables">Number of Tables *</label>
+          <input id="f-tables" type="number" min="1" step="1" value="1" required>
+          <p class="hint">1 table, 2 chairs and lighting are included in the base rate. Each additional table is ₹150.</p>
+        </div>
+        <div class="field">
+          <div class="checkbox-row">
+            <input type="checkbox" id="f-power">
+            <label for="f-power" style="margin:0;font-weight:600;color:#241F16">Need a 15A power connection?
+              <span class="hint" style="display:block;margin-top:3px">Subject to availability, at an additional cost — we'll confirm with you separately, it's not included in the estimate below.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="pricing-box">
+          <div class="line"><span>Base rate (<span id="price-type-label">select resident/outsider</span>)</span><span id="price-base">₹0</span></div>
+          <div class="line"><span>Additional tables (<span id="price-extra-count">0</span> × ₹150)</span><span id="price-extra">₹0</span></div>
+          <div class="line total"><span>Estimated Total</span><span id="price-total">₹0</span></div>
+          <p class="note">15A power connection cost isn't included above — it depends on availability and will be confirmed separately.</p>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">Register Stall</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
+    const RATES={Resident:600,Outsider:1000};
+    const EXTRA_TABLE_RATE=150;
+    const $=id=>document.getElementById(id);
+    const clean=value=>String(value??'').trim();
+
+    function updatePricing(){
+      const type=document.querySelector('input[name="type"]:checked')?.value||'';
+      const tables=Math.max(parseInt($('f-tables').value,10)||1,1);
+      const base=RATES[type]||0;
+      const extraCount=Math.max(tables-1,0);
+      const extra=extraCount*EXTRA_TABLE_RATE;
+      const total=base+extra;
+      $('price-type-label').textContent=type?`${type}`:'select resident/outsider';
+      $('price-base').textContent=`₹${base}`;
+      $('price-extra-count').textContent=extraCount;
+      $('price-extra').textContent=`₹${extra}`;
+      $('price-total').textContent=`₹${total}`;
+      document.querySelectorAll('#type-group .radio-item').forEach(el=>{
+        el.classList.toggle('checked',el.querySelector('input').checked);
+      });
+      return total;
+    }
+    document.querySelectorAll('input[name="type"]').forEach(r=>r.addEventListener('change',updatePricing));
+    $('f-tables').addEventListener('input',updatePricing);
+
+    async function loadStallDates(){
+      try{
+        const response=await fetch(`${API_URL}?action=getStallData`,{cache:'no-store'});
+        const result=await response.json();
+        const dates=result?.data?.stallDates||[];
+        $('f-date').innerHTML=dates.length
+          ? '<option value="">Select a date</option>'+dates.map(d=>`<option value="${d}">${d}</option>`).join('')
+          : '<option value="">No stall dates configured yet</option>';
+      }catch(e){
+        $('f-date').innerHTML='<option value="">Could not load dates — please try again</option>';
+        console.error(e);
+      }
+    }
+
+    async function submitStall(evt){
+      evt.preventDefault();
+      const name=clean($('f-name').value);
+      const mobile=clean($('f-mobile').value);
+      const stallDate=clean($('f-date').value);
+      const residentType=document.querySelector('input[name="type"]:checked')?.value||'';
+      const category=clean($('f-category').value);
+      const items=clean($('f-items').value);
+      const tables=Math.max(parseInt($('f-tables').value,10)||1,1);
+      const powerRequested=$('f-power').checked;
+      const msg=$('form-msg');
+
+      if(!name||!mobile||!stallDate||!residentType||!category||!items||!tables){
+        msg.className='form-msg err';msg.textContent='Please fill in all required fields.';msg.classList.remove('hidden');
+        return;
+      }
+
+      const estimatedAmount=updatePricing();
+      const submitBtn=$('submit-btn');
+      submitBtn.disabled=true;submitBtn.textContent='Saving…';
+      try{
+        const response=await fetch(API_URL,{
+          method:'POST',
+          headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({action:'addStallRegistration',payload:{
+            name, mobile, stallDate, residentType, category, items, tables, powerRequested, estimatedAmount
+          }})
+        });
+        const result=await response.json();
+        if(result.status!=='success') throw new Error(result.message||'Could not save registration.');
+        msg.className='form-msg ok';msg.textContent='Stall registered! We\'ll be in touch to confirm details.';msg.classList.remove('hidden');
+        $('stall-form').reset();
+        updatePricing();
+      }catch(err){
+        msg.className='form-msg err';msg.textContent='Could not save your registration. Please try again.';msg.classList.remove('hidden');
+        console.error(err);
+      }finally{
+        submitBtn.disabled=false;submitBtn.textContent='Register Stall';
+      }
+    }
+
+    updatePricing();
+    loadStallDates();
+  </script>
+</body>
+</html>
