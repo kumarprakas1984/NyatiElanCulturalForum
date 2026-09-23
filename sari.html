@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0F5754">
+  <title>Sari Seva • Nyati Elan Cultural Forum</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#241F16;background:#FAF8F4}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
+    .wrap{width:min(900px,calc(100% - 28px));margin:auto}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0;flex-wrap:wrap}
+    .brand{font-weight:850;color:#241F16;text-decoration:none}
+    .back{color:#146F6C;text-decoration:none;font-weight:700;font-size:.9rem;background:none;border:none;cursor:pointer;font:inherit}
+    .intro{padding:10px 0 22px}
+    .eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;color:#146F6C}
+    .intro h1{font-size:clamp(1.8rem,5vw,2.6rem);letter-spacing:-.05em;margin:10px 0 8px}
+    .intro p{color:#6B5D45;margin:0;line-height:1.6}
+    .lock-banner{background:#FBF1DC;border:1px solid #F0DBA0;color:#6B4408;border-radius:14px;padding:14px 16px;margin-bottom:20px;font-size:.88rem;line-height:1.5}
+    .day-section{margin-bottom:22px}
+    .day-heading{display:flex;align-items:center;gap:10px;font-size:.95rem;font-weight:800;color:#241F16;margin-bottom:10px}
+    .color-swatch{width:16px;height:16px;border-radius:5px;border:1px solid rgba(0,0,0,.12);flex-shrink:0}
+    .color-label{font-weight:600;color:#6B5D45;font-size:.82rem}
+    .period-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .period-tile{border-radius:16px;padding:16px;text-align:left;font:inherit;color:inherit;border:1px solid #E4DCCD}
+    .period-tile.available{background:#fff;cursor:pointer;transition:.15s}
+    .period-tile.available:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(20,111,108,.15);border-color:#9FD5D1}
+    .period-tile.claimed{background:#F3EEE5;color:#8A7A5C;cursor:default}
+    .period-tile.locked{background:#FAF8F4;color:#A79876;cursor:not-allowed}
+    .period-tile .p-name{font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#146F6C}
+    .period-tile.claimed .p-name,.period-tile.locked .p-name{color:#8A7A5C}
+    .period-tile .p-status{font-size:.95rem;font-weight:700;margin-top:6px}
+    .state{padding:38px 12px;text-align:center;color:#6B5D45}
+    .error{color:#b42318;background:#fff5f4;border:1px solid #fecdca;border-radius:12px;padding:14px}
+    .skeleton{height:90px;border-radius:16px;background:linear-gradient(90deg,#F3EEE5 25%,#E4DCCD 37%,#F3EEE5 63%);background-size:400% 100%;animation:shine 1.3s infinite}
+    @keyframes shine{to{background-position:-400% 0}}
+    .hidden{display:none !important}
+
+    .modal-overlay{position:fixed;inset:0;background:rgba(36,31,22,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
+    .modal{background:#fff;border-radius:20px;padding:26px;width:min(460px,100%);max-height:92vh;overflow-y:auto;text-align:left}
+    .modal h3{margin:0 0 4px;font-size:1.2rem;letter-spacing:-.02em}
+    .modal .sub{color:#6B5D45;font-size:.85rem;margin:0 0 18px}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:.82rem;font-weight:700;color:#4E4433;margin-bottom:5px}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    input{width:100%;border:1px solid #D0C4AE;border-radius:12px;padding:12px 13px;background:#fff;color:#241F16;font:inherit;outline:0}
+    input:focus{border-color:#146F6C;box-shadow:0 0 0 3px rgba(20,111,108,.15)}
+    .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+    .btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;font-size:.9rem;font-family:inherit}
+    .btn-primary{background:#146F6C;color:#fff}
+    .btn-primary:hover{background:#0F5754}
+    .form-msg{font-size:.85rem;border-radius:10px;padding:10px 12px;margin-bottom:14px}
+    .form-msg.err{background:#fff5f4;color:#b42318;border:1px solid #fecdca}
+    .form-msg.ok{background:#EAF5EF;color:#256648;border:1px solid #C7E5D3}
+    @media(max-width:600px){.row2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="wrap topbar">
+    <a class="brand" href="index.html">Nyati Elan Cultural Forum</a>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span id="admin-status" class="back hidden"></span>
+      <button type="button" id="admin-signin-link" class="back" onclick="openAdminLogin()">Admin sign-in</button>
+      <a class="back" href="app.html">Open community hub →</a>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="intro"><div class="eyebrow">Durga Puja seva</div><h1>Sari Seva</h1><p>Sponsor Devi's sari for a morning or evening — one sponsor per slot.</p></section>
+    <div id="lock-banner" class="lock-banner hidden"></div>
+    <section id="days-container"><div class="skeleton"></div></section>
+  </main>
+
+  <!-- Admin Sign-In Modal -->
+  <div id="admin-login-overlay" class="modal-overlay hidden">
+    <div class="modal" style="width:min(380px,100%);text-align:center">
+      <h3>Admin Sign-In</h3>
+      <p class="sub">Sign in to register a sari sponsorship before the public opening time.</p>
+      <div id="admin-gsi-button" style="display:flex;justify-content:center;margin:10px 0"></div>
+      <div id="admin-login-msg" class="hidden"></div>
+      <button type="button" class="btn" style="background:#F3EEE5;color:#4E4433;margin-top:10px" onclick="closeAdminLogin()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Sponsor Modal -->
+  <div id="add-modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>Sponsor Devi's Sari</h3>
+      <p class="sub" id="modal-sub"></p>
+      <div id="form-msg" class="hidden"></div>
+      <form id="add-form" onsubmit="submitRegistration(event)">
+        <div class="field">
+          <label for="f-name">Name *</label>
+          <input id="f-name" type="text" required>
+        </div>
+        <div class="field">
+          <label for="f-mobile">Mobile Number *</label>
+          <input id="f-mobile" type="tel" placeholder="WhatsApp number preferred" required>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-building">Building *</label>
+            <input id="f-building" type="text" placeholder="e.g. B1" required>
+          </div>
+          <div class="field">
+            <label for="f-flat">Flat Number *</label>
+            <input id="f-flat" type="text" placeholder="e.g. 402" required>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" style="background:#F3EEE5;color:#4E4433" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn">Sponsor This Slot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
+    const ADMIN_CLIENT_ID='939061030612-0buu96811vujgankod2cmcjf2t8bc9ih.apps.googleusercontent.com';
+    const ADMIN_SESSION_KEY='nyati-admin-session'; // shared with app.html / participants.html / annadan.html
+    const $=id=>document.getElementById(id);
+    const clean=value=>String(value??'').trim();
+    const escapeHtml=value=>clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    // Fixed day-wise sari colors for this year's Durga Puja.
+    const SARI_DAY_COLORS={
+      '2026-10-11':'Orange','2026-10-12':'White','2026-10-13':'Red','2026-10-14':'Royal Blue',
+      '2026-10-15':'Yellow','2026-10-16':'Green','2026-10-17':'Grey','2026-10-18':'Purple','2026-10-19':'Peacock Green'
+    };
+    const COLOR_HEX={
+      'Orange':'#E8792A','White':'#F5F1E8','Red':'#C23B3B','Royal Blue':'#1F3A93','Yellow':'#E8C547',
+      'Green':'#3E8E5A','Grey':'#8C8C8C','Purple':'#7B4B94','Peacock Green':'#0E7C61'
+    };
+
+    let isAdmin=false, adminEmail=null, gsiInitialized=false;
+    let unlockAt=null;
+    let currentDate=null, currentPeriod=null;
+
+    // Lazy-load Google Sign-In only when actually needed.
+    const _loadedScripts={};
+    function loadScript(src){
+      if(_loadedScripts[src]) return _loadedScripts[src];
+      _loadedScripts[src]=new Promise((resolve,reject)=>{
+        const s=document.createElement('script');
+        s.src=src; s.onload=()=>resolve(); s.onerror=()=>reject(new Error('Failed to load '+src));
+        document.head.appendChild(s);
+      });
+      return _loadedScripts[src];
+    }
+    async function loadGsiScript(){ if(!window.google?.accounts?.id) await loadScript('https://accounts.google.com/gsi/client'); }
+
+    function getStoredAdminSession(){
+      try{
+        const raw=localStorage.getItem(ADMIN_SESSION_KEY);
+        if(!raw) return null;
+        const parsed=JSON.parse(raw);
+        if(!parsed?.email||!parsed?.exp||Date.now()>parsed.exp) return null;
+        return parsed;
+      }catch(e){ return null; }
+    }
+    function saveAdminSession(email,name,expSeconds){
+      try{ localStorage.setItem(ADMIN_SESSION_KEY,JSON.stringify({email,name:name||email,exp:(expSeconds||0)*1000})); }catch(e){}
+    }
+    function clearAdminSession(){ try{ localStorage.removeItem(ADMIN_SESSION_KEY); }catch(e){} }
+    function jwt_decode(token){
+      const base64Url=token.split('.')[1];
+      const base64=base64Url.replace(/-/g,'+').replace(/_/g,'/');
+      const jsonPayload=decodeURIComponent(atob(base64).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+      return JSON.parse(jsonPayload);
+    }
+    function ensureGsiInitialized(){
+      if(gsiInitialized||!window.google?.accounts?.id) return;
+      google.accounts.id.initialize({ client_id: ADMIN_CLIENT_ID, callback: handleAdminCredentialResponse, auto_select: false });
+      google.accounts.id.renderButton(document.getElementById('admin-gsi-button'), { theme:'outline', size:'large', text:'signin_with' });
+      gsiInitialized=true;
+    }
+    async function openAdminLogin(){
+      $('admin-login-msg').classList.add('hidden');
+      $('admin-login-overlay').classList.remove('hidden');
+      await loadGsiScript();
+      ensureGsiInitialized();
+    }
+    function closeAdminLogin(){ $('admin-login-overlay').classList.add('hidden'); }
+    function applyAdminAccess(email,name){
+      isAdmin=true; adminEmail=email;
+      $('admin-signin-link').classList.add('hidden');
+      $('admin-status').innerHTML=`Admin: ${escapeHtml(name||email)} &nbsp;·&nbsp; <button type="button" onclick="signOutAdmin()" style="background:none;border:none;color:inherit;text-decoration:underline;cursor:pointer;font:inherit">Sign out</button>`;
+      $('admin-status').classList.remove('hidden');
+      renderDays();
+    }
+    function signOutAdmin(){
+      isAdmin=false; adminEmail=null; clearAdminSession();
+      $('admin-signin-link').classList.remove('hidden');
+      $('admin-status').classList.add('hidden');
+      renderDays();
+    }
+    async function checkAdminEmail(email){
+      const response=await fetch(`${API_URL}?action=checkAdmin&email=${encodeURIComponent(email)}`,{cache:'no-store'});
+      return response.json();
+    }
+    async function tryRestoreAdminSession(){
+      const session=getStoredAdminSession();
+      if(!session) return;
+      try{
+        const result=await checkAdminEmail(session.email);
+        if(result.status!=='success'||!result?.data?.isAdmin){ clearAdminSession(); return; }
+        applyAdminAccess(session.email,session.name);
+      }catch(e){}
+    }
+    async function handleAdminCredentialResponse(response){
+      const msg=$('admin-login-msg');
+      try{
+        const decoded=jwt_decode(response.credential);
+        const email=(decoded?.email||'').trim().toLowerCase();
+        const result=await checkAdminEmail(email);
+        if(result.status!=='success'||!result?.data?.isAdmin) throw new Error('This Google account is not a registered admin.');
+        saveAdminSession(email,decoded?.name,decoded?.exp);
+        applyAdminAccess(email,decoded?.name);
+        closeAdminLogin();
+      }catch(err){
+        msg.className='form-msg err';msg.textContent=err.message||'This Google account is not a registered admin.';msg.classList.remove('hidden');
+      }
+    }
+
+    let allDates=[], allClaimed={};
+
+    function displayDate(iso){
+      const d=new Date(iso+'T00:00:00');
+      return d.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+    }
+
+    function isUnlocked(){ return isAdmin || (unlockAt && Date.now()>=unlockAt); }
+
+    let countdownInterval=null;
+
+    function formatCountdown(ms){
+      if(ms<=0) return '0d 00h 00m 00s';
+      const totalSeconds=Math.floor(ms/1000);
+      const days=Math.floor(totalSeconds/86400);
+      const hours=Math.floor((totalSeconds%86400)/3600);
+      const minutes=Math.floor((totalSeconds%3600)/60);
+      const seconds=totalSeconds%60;
+      return `${days}d ${String(hours).padStart(2,'0')}h ${String(minutes).padStart(2,'0')}m ${String(seconds).padStart(2,'0')}s`;
+    }
+
+    function stopCountdownTicker(){
+      if(countdownInterval){ clearInterval(countdownInterval); countdownInterval=null; }
+    }
+
+    function startCountdownTicker(){
+      stopCountdownTicker();
+      const tick=()=>{
+        const remaining=unlockAt-Date.now();
+        const el=$('countdown-ticker');
+        if(!el) { stopCountdownTicker(); return; }
+        if(remaining<=0){
+          stopCountdownTicker();
+          renderDays(); // page unlocks itself the instant the countdown hits zero, no refresh needed
+          return;
+        }
+        el.textContent=formatCountdown(remaining);
+      };
+      tick();
+      countdownInterval=setInterval(tick,1000);
+    }
+
+    function renderDays(){
+      if(!allDates.length){
+        $('days-container').innerHTML='<div class="state">No Sari dates configured yet. Ask an admin to set them in the Config sheet.</div>';
+        return;
+      }
+      const unlocked=isUnlocked();
+      $('lock-banner').classList.toggle('hidden',unlocked);
+      if(!unlocked && unlockAt){
+        const opens=new Date(unlockAt).toLocaleString('en-IN',{dateStyle:'long',timeStyle:'short'});
+        $('lock-banner').innerHTML=`🔒 Sari sponsorship registration opens <b>${opens}</b> for residents.<br>Opens in <span id="countdown-ticker" style="font-variant-numeric:tabular-nums;font-weight:800">…</span><br>Admins can sign in above to register early.`;
+        startCountdownTicker();
+      }else{
+        stopCountdownTicker();
+      }
+
+      $('days-container').innerHTML=allDates.map(date=>{
+        const color=SARI_DAY_COLORS[date]||'';
+        const hex=COLOR_HEX[color]||'#D0C4AE';
+        return `
+        <div class="day-section">
+          <div class="day-heading">
+            ${color?`<span class="color-swatch" style="background:${hex}"></span><span class="color-label">${escapeHtml(color)}</span> —`:''}
+            ${displayDate(date)}
+          </div>
+          <div class="period-grid">
+            ${['Morning','Evening'].map(period=>{
+              const key=`${date}|${period}`;
+              const claimed=!!allClaimed[key];
+              const clickable=!claimed&&unlocked;
+              const stateClass=claimed?'claimed':(unlocked?'available':'locked');
+              const statusText=claimed?'Claimed':(unlocked?'Available':'Locked');
+              return `
+              <button type="button" class="period-tile ${stateClass}" ${clickable?`data-date="${date}" data-period="${period}"`:'disabled'}>
+                <div class="p-name">${period}</div>
+                <div class="p-status">${statusText}</div>
+              </button>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('');
+
+      $('days-container').querySelectorAll('.period-tile.available').forEach(btn=>{
+        btn.addEventListener('click',()=>openModal(btn.dataset.date,btn.dataset.period));
+      });
+    }
+
+    function openModal(date,period){
+      currentDate=date; currentPeriod=period;
+      const color=SARI_DAY_COLORS[date]||'';
+      $('modal-sub').textContent=`${displayDate(date)} — ${period}${color?` — ${color} sari`:''}`;
+      $('form-msg').classList.add('hidden');
+      $('add-modal-overlay').classList.remove('hidden');
+    }
+    function closeModal(){
+      $('add-modal-overlay').classList.add('hidden');
+      $('add-form').reset();
+    }
+
+    async function submitRegistration(evt){
+      evt.preventDefault();
+      const name=clean($('f-name').value), mobile=clean($('f-mobile').value), building=clean($('f-building').value), flat=clean($('f-flat').value);
+      const msg=$('form-msg');
+      if(!name||!mobile||!building||!flat){
+        msg.className='form-msg err';msg.textContent='Please fill in all fields.';msg.classList.remove('hidden');
+        return;
+      }
+      const submitBtn=$('submit-btn');
+      submitBtn.disabled=true;submitBtn.textContent='Saving…';
+      try{
+        const response=await fetch(API_URL,{
+          method:'POST',
+          headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({action:'addSariRegistration',payload:{
+            name, mobile, building, flat, date:currentDate, period:currentPeriod,
+            color: SARI_DAY_COLORS[currentDate]||'', adminEmail: isAdmin ? adminEmail : ''
+          }})
+        });
+        const result=await response.json();
+        if(result.status!=='success') throw new Error(result.message||'Could not save registration.');
+        msg.className='form-msg ok';msg.textContent='Sari sponsorship registered! Thank you.';msg.classList.remove('hidden');
+        await load();
+        setTimeout(closeModal,900);
+      }catch(err){
+        msg.className='form-msg err';msg.textContent=err.message||'Could not save registration. Please try again.';msg.classList.remove('hidden');
+        console.error(err);
+      }finally{
+        submitBtn.disabled=false;submitBtn.textContent='Sponsor This Slot';
+      }
+    }
+
+    async function load(){
+      try{
+        const response=await fetch(`${API_URL}?action=getSariData`,{cache:'no-store'});
+        const result=await response.json();
+        if(result.status!=='success') throw new Error(result.message);
+        allDates=result?.data?.dates||[];
+        allClaimed=result?.data?.claimed||{};
+        unlockAt=result?.data?.unlockAt?new Date(result.data.unlockAt).getTime():null;
+        renderDays();
+      }catch(e){
+        $('days-container').innerHTML='<div class="error">Sari seva data could not be loaded. Please try again in a moment.</div>';
+        console.error(e);
+      }
+    }
+
+    tryRestoreAdminSession();
+    load();
+  </script>
+</body>
+</html>
