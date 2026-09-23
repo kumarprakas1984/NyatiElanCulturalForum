@@ -32,3 +32,9 @@ jobs:
         env:
           clasp_config_auth: /home/runner/clasprc.json
         run: clasp push -f
+
+      - name: Deploy new version to the live Web App
+        working-directory: apps-script
+        env:
+          clasp_config_auth: /home/runner/clasprc.json
+        run: clasp deploy --deploymentId AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0 --description "Auto-deploy from GitHub Actions"
