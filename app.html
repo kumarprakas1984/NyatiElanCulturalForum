@@ -681,6 +681,11 @@
                         class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
                     <p class="text-xs text-gray-500 mt-1">The file is uploaded to the shared Google Drive folder.</p>
                 </div>
+                <div>
+                    <label for="expense-volunteer" class="block mb-1.5 text-sm font-semibold text-gray-700">Volunteer Name (optional)</label>
+                    <input type="text" id="expense-volunteer" placeholder="Leave blank to use your logged-in admin name"
+                        class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                </div>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" onclick="closeExpenseModal()"
                         class="px-5 py-2.5 text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 font-medium transition">Cancel</button>
@@ -1550,6 +1555,7 @@
             try {
                 const receiptFile = document.getElementById('expense-receipt').files[0];
                 const receiptUrl = receiptFile ? await uploadExpenseReceipt(receiptFile) : '';
+                const volunteerName = document.getElementById('expense-volunteer').value.trim() || loggedInUser?.name || loggedInUser?.email || 'Admin';
                 const response = await fetch(CONFIG.API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
@@ -1561,7 +1567,8 @@
                             total: total,
                             given: given,
                             pending: pending,
-                            recordedBy: loggedInUser?.name || loggedInUser?.email || 'Admin',
+                            volunteer: volunteerName,
+                            recordedBy: volunteerName,
                             receiptUrl: receiptUrl
                         }
                     })
@@ -1941,7 +1948,16 @@
                 expenseTableBody.innerHTML = filteredExpenses.map(exp => {
                     const cells = headersToDisplay.map(header => {
                         const isNumeric = header === 'Total' || header === 'Given' || header === 'Pending';
-                        return `<td class="py-3 px-4 text-sm ${isNumeric ? 'text-right font-medium' : 'text-left'}">${escapeHtml(String(exp[header] || ''))}</td>`;
+                        const rawValue = String(exp[header] || '');
+                        let cellContent;
+                        if (/^https?:\/\//i.test(rawValue.trim())) {
+                            const linkLabel = header.toLowerCase().includes('receipt') || header.toLowerCase().includes('bill') || header.toLowerCase().includes('photo')
+                                ? 'View Receipt' : 'Open Link';
+                            cellContent = `<a href="${escapeHtml(rawValue.trim())}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-medium inline-flex items-center gap-1"><i class="fas fa-arrow-up-right-from-square text-xs"></i> ${linkLabel}</a>`;
+                        } else {
+                            cellContent = escapeHtml(rawValue);
+                        }
+                        return `<td class="py-3 px-4 text-sm ${isNumeric ? 'text-right font-medium' : 'text-left'}">${cellContent}</td>`;
                     }).join('');
                     return `<tr class="hover:bg-gray-50">${cells}</tr>`;
                 }).join('');
