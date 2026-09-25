@@ -11,13 +11,27 @@
     body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
     .wrap{width:min(900px,calc(100% - 28px));margin:auto}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0;flex-wrap:wrap}
+    .site-nav-bar{background:linear-gradient(135deg,#0B4240 0%,#082F2E 100%);width:100%}
+    .site-nav-inner{max-width:1180px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:12px 16px;scrollbar-width:none}
+    .site-nav-inner::-webkit-scrollbar{display:none}
+    .site-nav-link{color:rgba(255,255,255,.72);text-decoration:none;font-weight:700;font-size:.85rem;padding:9px 14px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;transition:.15s;flex-shrink:0}
+    .site-nav-link:hover{color:#fff;background:rgba(255,255,255,.12)}
+    .site-nav-link.active{color:#fff;background:#146F6C;box-shadow:0 2px 8px rgba(0,0,0,.2)}
     .brand{font-weight:850;color:#241F16;text-decoration:none}
     .back{color:#146F6C;text-decoration:none;font-weight:700;font-size:.9rem;background:none;border:none;cursor:pointer;font:inherit}
     .intro{padding:10px 0 22px}
     .eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;color:#146F6C}
     .intro h1{font-size:clamp(1.8rem,5vw,2.6rem);letter-spacing:-.05em;margin:10px 0 8px}
     .intro p{color:#6B5D45;margin:0;line-height:1.6}
-    .lock-banner{background:#FBF1DC;border:1px solid #F0DBA0;color:#6B4408;border-radius:14px;padding:14px 16px;margin-bottom:20px;font-size:.88rem;line-height:1.5}
+    .lock-banner{background:linear-gradient(135deg,#146F6C 0%,#0F5754 100%);color:#fff;border-radius:18px;padding:22px 20px;margin-bottom:20px;text-align:center;box-shadow:0 12px 30px rgba(20,111,108,.28)}
+    .lock-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px}
+    .lock-date{font-size:1.05rem;font-weight:800;margin-bottom:18px}
+    .countdown-grid{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+    .countdown-segment{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:14px;padding:12px 16px;min-width:66px}
+    .countdown-value{font-size:1.8rem;font-weight:850;font-variant-numeric:tabular-nums;line-height:1;transition:transform .25s ease}
+    .countdown-value.pulse{animation:pulse-tick .4s ease}
+    @keyframes pulse-tick{0%{transform:scale(1.18);opacity:.65}100%{transform:scale(1);opacity:1}}
+    .countdown-label{font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;opacity:.75;margin-top:5px}
     .day-section{margin-bottom:22px}
     .day-heading{display:flex;align-items:center;gap:10px;font-size:.95rem;font-weight:800;color:#241F16;margin-bottom:10px}
     .color-swatch{width:16px;height:16px;border-radius:5px;border:1px solid rgba(0,0,0,.12);flex-shrink:0}
@@ -55,8 +69,23 @@
     .form-msg.ok{background:#EAF5EF;color:#256648;border:1px solid #C7E5D3}
     @media(max-width:600px){.row2{grid-template-columns:1fr}}
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+  <nav class="site-nav-bar">
+    <div class="site-nav-inner">
+      <a href="app.html#admin" class="site-nav-link"><i class="fas fa-user-shield"></i> Admin</a>
+      <a href="app.html#resident" class="site-nav-link"><i class="fas fa-chart-pie"></i> Finance</a>
+      <a href="app.html#gallery" class="site-nav-link"><i class="fas fa-images"></i> Gallery</a>
+      <a href="app.html#events" class="site-nav-link"><i class="fas fa-calendar-alt"></i> Events</a>
+      <a href="participants.html" class="site-nav-link"><i class="fas fa-list-check"></i> Participation</a>
+      <a href="annadan.html" class="site-nav-link"><i class="fas fa-bowl-rice"></i> Annadan</a>
+      <a href="stalls.html" class="site-nav-link"><i class="fas fa-store"></i> Stalls</a>
+      <a href="prasad.html" class="site-nav-link"><i class="fas fa-hands-praying"></i> Prasad</a>
+      <a href="sari.html" class="site-nav-link active"><i class="fas fa-shirt"></i> Sari</a>
+    </div>
+  </nav>
+
   <header class="wrap topbar">
     <a class="brand" href="index.html">Nyati Elan Cultural Forum</a>
     <div style="display:flex;align-items:center;gap:16px">
@@ -234,16 +263,6 @@
 
     let countdownInterval=null;
 
-    function formatCountdown(ms){
-      if(ms<=0) return '0d 00h 00m 00s';
-      const totalSeconds=Math.floor(ms/1000);
-      const days=Math.floor(totalSeconds/86400);
-      const hours=Math.floor((totalSeconds%86400)/3600);
-      const minutes=Math.floor((totalSeconds%3600)/60);
-      const seconds=totalSeconds%60;
-      return `${days}d ${String(hours).padStart(2,'0')}h ${String(minutes).padStart(2,'0')}m ${String(seconds).padStart(2,'0')}s`;
-    }
-
     function stopCountdownTicker(){
       if(countdownInterval){ clearInterval(countdownInterval); countdownInterval=null; }
     }
@@ -252,14 +271,25 @@
       stopCountdownTicker();
       const tick=()=>{
         const remaining=unlockAt-Date.now();
-        const el=$('countdown-ticker');
-        if(!el) { stopCountdownTicker(); return; }
+        if(!$('cd-secs')) { stopCountdownTicker(); return; }
         if(remaining<=0){
           stopCountdownTicker();
           renderDays(); // page unlocks itself the instant the countdown hits zero, no refresh needed
           return;
         }
-        el.textContent=formatCountdown(remaining);
+        const totalSeconds=Math.floor(remaining/1000);
+        const days=Math.floor(totalSeconds/86400);
+        const hours=Math.floor((totalSeconds%86400)/3600);
+        const minutes=Math.floor((totalSeconds%3600)/60);
+        const seconds=totalSeconds%60;
+        $('cd-days').textContent=String(days).padStart(2,'0');
+        $('cd-hours').textContent=String(hours).padStart(2,'0');
+        $('cd-mins').textContent=String(minutes).padStart(2,'0');
+        const secEl=$('cd-secs');
+        secEl.textContent=String(seconds).padStart(2,'0');
+        secEl.classList.remove('pulse');
+        void secEl.offsetWidth; // restart the animation each tick
+        secEl.classList.add('pulse');
       };
       tick();
       countdownInterval=setInterval(tick,1000);
@@ -274,7 +304,15 @@
       $('lock-banner').classList.toggle('hidden',unlocked);
       if(!unlocked && unlockAt){
         const opens=new Date(unlockAt).toLocaleString('en-IN',{dateStyle:'long',timeStyle:'short'});
-        $('lock-banner').innerHTML=`🔒 Sari sponsorship registration opens <b>${opens}</b> for residents.<br>Opens in <span id="countdown-ticker" style="font-variant-numeric:tabular-nums;font-weight:800">…</span><br>Admins can sign in above to register early.`;
+        $('lock-banner').innerHTML=`
+          <div class="lock-title">🔒 Sari sponsorship opens</div>
+          <div class="lock-date">${opens}</div>
+          <div class="countdown-grid">
+            <div class="countdown-segment"><div class="countdown-value" id="cd-days">--</div><div class="countdown-label">Days</div></div>
+            <div class="countdown-segment"><div class="countdown-value" id="cd-hours">--</div><div class="countdown-label">Hours</div></div>
+            <div class="countdown-segment"><div class="countdown-value" id="cd-mins">--</div><div class="countdown-label">Mins</div></div>
+            <div class="countdown-segment"><div class="countdown-value" id="cd-secs">--</div><div class="countdown-label">Secs</div></div>
+          </div>`;
         startCountdownTicker();
       }else{
         stopCountdownTicker();
