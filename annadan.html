@@ -11,6 +11,12 @@
     body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
     .wrap{width:min(1180px,calc(100% - 28px));margin:auto}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0}
+    .site-nav-bar{background:linear-gradient(135deg,#0B4240 0%,#082F2E 100%);width:100%}
+    .site-nav-inner{max-width:1180px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:12px 16px;scrollbar-width:none}
+    .site-nav-inner::-webkit-scrollbar{display:none}
+    .site-nav-link{color:rgba(255,255,255,.72);text-decoration:none;font-weight:700;font-size:.85rem;padding:9px 14px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;transition:.15s;flex-shrink:0}
+    .site-nav-link:hover{color:#fff;background:rgba(255,255,255,.12)}
+    .site-nav-link.active{color:#fff;background:#146F6C;box-shadow:0 2px 8px rgba(0,0,0,.2)}
     .brand{font-weight:850;color:#241F16;text-decoration:none}
     .back{color:#146F6C;text-decoration:none;font-weight:700;font-size:.9rem}
     .intro{padding:30px 0 22px}
@@ -31,7 +37,8 @@
 
     /* Item tiles (informational only — not clickable, no donor detail) */
     .item-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
-    .item-tile{background:#fff;border:1px solid #E4DCCD;border-radius:16px;padding:18px}
+    .item-tile{background:#fff;border:1px solid #E4DCCD;border-radius:16px;padding:18px;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:.15s;width:100%}
+    .item-tile:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(20,111,108,.15);border-color:#9FD5D1}
     .item-tile .it-name{font-size:.9rem;font-weight:800;color:#241F16}
     .item-tile .it-qty{font-size:1.5rem;font-weight:850;margin-top:8px}
     .item-tile .it-label{font-size:.76rem;color:#6B5D45;margin-top:1px}
@@ -63,8 +70,23 @@
 
     @media(max-width:760px){.topbar{padding-bottom:10px}.row2{grid-template-columns:1fr}}
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+  <nav class="site-nav-bar">
+    <div class="site-nav-inner">
+      <a href="app.html#admin" class="site-nav-link"><i class="fas fa-user-shield"></i> Admin</a>
+      <a href="app.html#resident" class="site-nav-link"><i class="fas fa-chart-pie"></i> Finance</a>
+      <a href="app.html#gallery" class="site-nav-link"><i class="fas fa-images"></i> Gallery</a>
+      <a href="app.html#events" class="site-nav-link"><i class="fas fa-calendar-alt"></i> Events</a>
+      <a href="participants.html" class="site-nav-link"><i class="fas fa-list-check"></i> Participation</a>
+      <a href="annadan.html" class="site-nav-link active"><i class="fas fa-bowl-rice"></i> Annadan</a>
+      <a href="stalls.html" class="site-nav-link"><i class="fas fa-store"></i> Stalls</a>
+      <a href="prasad.html" class="site-nav-link"><i class="fas fa-hands-praying"></i> Prasad</a>
+      <a href="sari.html" class="site-nav-link"><i class="fas fa-shirt"></i> Sari</a>
+    </div>
+  </nav>
+
   <header class="wrap topbar">
     <a class="brand" href="index.html">Nyati Elan Cultural Forum</a>
     <div style="display:flex;align-items:center;gap:16px">
@@ -74,7 +96,7 @@
     </div>
   </header>
   <main class="wrap">
-    <section class="intro"><div class="eyebrow">Community seva</div><h1>Annadan</h1><p>See what's still needed for the community feast, and pledge what you can bring.</p></section>
+    <section class="intro"><div class="eyebrow">Community seva</div><h1>Annadan</h1><p>See what's still needed for the community feast — tap an item to pledge it, or bring your own.</p></section>
     <section class="panel" aria-live="polite">
       <div class="toolbar">
         <span class="stat-line" id="overall-stat">Loading requirements…</span>
@@ -205,24 +227,29 @@
         const met=it.stillNeeded<=0 && it.required>0;
         const pct=it.required>0?Math.min(100,Math.round((it.received/it.required)*100)):0;
         return `
-        <div class="item-tile ${met?'met':'needed'}">
+        <button type="button" class="item-tile ${met?'met':'needed'}" data-item="${escapeHtml(it.item)}">
           <div class="it-name">${escapeHtml(it.item)}</div>
           <div class="it-qty">${fmtKg(it.received)}</div>
           <div class="it-label">of ${fmtKg(it.required)} needed</div>
           <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
           ${met?'<span class="met-pill">Fully met ✓</span>':`<div class="it-label" style="margin-top:6px">${fmtKg(it.stillNeeded)} still needed</div>`}
-        </div>`;
+        </button>`;
       }).join(''):'<div class="state" style="grid-column:1/-1">No items listed yet. Ask an admin to add rows to the Annadan sheet.</div>';
+
+      $('item-tiles').querySelectorAll('.item-tile').forEach(btn=>{
+        btn.addEventListener('click',()=>openPledgeModal(btn.dataset.item));
+      });
     }
 
     function populateItemSelect(){
       $('f-item').innerHTML='<option value="">Select an item</option>'+
         items.map(it=>`<option value="${escapeHtml(it.item)}">${escapeHtml(it.item)}${it.stillNeeded>0?` (${fmtKg(it.stillNeeded)} still needed)`:' (fully met)'}</option>`).join('');
     }
-    function openPledgeModal(){
+    function openPledgeModal(preselectItem){
       $('pledge-modal-overlay').classList.remove('hidden');
       $('form-msg').classList.add('hidden');
       populateItemSelect();
+      if(preselectItem) $('f-item').value=preselectItem;
     }
     function closePledgeModal(){
       $('pledge-modal-overlay').classList.add('hidden');
