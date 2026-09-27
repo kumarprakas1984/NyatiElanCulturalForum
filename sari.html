@@ -11,7 +11,7 @@
     body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
     .wrap{width:min(900px,calc(100% - 28px));margin:auto}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0;flex-wrap:wrap}
-    .site-nav-bar{background:linear-gradient(135deg,#0B4240 0%,#082F2E 100%);width:100%}
+    .site-nav-bar{background:linear-gradient(135deg,#0B4240 0%,#082F2E 100%);width:100%;border-radius:14px;margin-bottom:20px}
     .site-nav-inner{max-width:1180px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:12px 16px;scrollbar-width:none}
     .site-nav-inner::-webkit-scrollbar{display:none}
     .site-nav-link{color:rgba(255,255,255,.72);text-decoration:none;font-weight:700;font-size:.85rem;padding:9px 14px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;transition:.15s;flex-shrink:0}
@@ -72,6 +72,14 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+  <header class="wrap topbar">
+    <a class="brand" href="index.html">Nyati Elan Cultural Forum</a>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span id="admin-status" class="back hidden"></span>
+      <button type="button" id="admin-signin-link" class="back" onclick="openAdminLogin()">Admin sign-in</button>
+      <a class="back" href="app.html">Open community hub →</a>
+    </div>
+  </header>
   <nav class="site-nav-bar">
     <div class="site-nav-inner">
       <a href="app.html#admin" class="site-nav-link"><i class="fas fa-user-shield"></i> Admin</a>
@@ -86,14 +94,6 @@
     </div>
   </nav>
 
-  <header class="wrap topbar">
-    <a class="brand" href="index.html">Nyati Elan Cultural Forum</a>
-    <div style="display:flex;align-items:center;gap:16px">
-      <span id="admin-status" class="back hidden"></span>
-      <button type="button" id="admin-signin-link" class="back" onclick="openAdminLogin()">Admin sign-in</button>
-      <a class="back" href="app.html">Open community hub →</a>
-    </div>
-  </header>
   <main class="wrap">
     <section class="intro"><div class="eyebrow">Durga Puja seva</div><h1>Sari Seva</h1><p>Sponsor Devi's sari for a morning or evening — one sponsor per slot.</p></section>
     <div id="lock-banner" class="lock-banner hidden"></div>
@@ -318,9 +318,11 @@
         stopCountdownTicker();
       }
 
-      $('days-container').innerHTML=allDates.map(date=>{
+      $('days-container').innerHTML=allDates.map((date,idx)=>{
         const color=SARI_DAY_COLORS[date]||'';
         const hex=COLOR_HEX[color]||'#D0C4AE';
+        const isFirstDay=idx===0, isLastDay=idx===allDates.length-1;
+        const periods=['Morning','Evening'].filter(p=>!(isFirstDay&&p==='Morning')&&!(isLastDay&&p==='Evening'));
         return `
         <div class="day-section">
           <div class="day-heading">
@@ -328,14 +330,15 @@
             ${displayDate(date)}
           </div>
           <div class="period-grid">
-            ${['Morning','Evening'].map(period=>{
+            ${periods.map(period=>{
               const key=`${date}|${period}`;
               const claimed=!!allClaimed[key];
               const clickable=!claimed&&unlocked;
               const stateClass=claimed?'claimed':(unlocked?'available':'locked');
               const statusText=claimed?'Claimed':(unlocked?'Available':'Locked');
+              const spanStyle=periods.length===1?'style="grid-column:1 / -1"':'';
               return `
-              <button type="button" class="period-tile ${stateClass}" ${clickable?`data-date="${date}" data-period="${period}"`:'disabled'}>
+              <button type="button" class="period-tile ${stateClass}" ${spanStyle} ${clickable?`data-date="${date}" data-period="${period}"`:'disabled'}>
                 <div class="p-name">${period}</div>
                 <div class="p-status">${statusText}</div>
               </button>`;
