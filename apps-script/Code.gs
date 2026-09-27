@@ -946,8 +946,8 @@ const SARI_UNLOCK_TIMESTAMP = new Date('2026-10-04T00:00:01+05:30');
  * item name, using getValues() rather than getDisplayValues() so a real
  * Sheets date cell comes back as a native Date object for arithmetic.
  */
-function getConfigValue(itemName) {
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+function getConfigValue(ss, itemName) {
+  ss = ss || SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const configSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.CONFIG);
   if (!configSheet) return null;
 
@@ -984,9 +984,9 @@ function formatDateKey(date) {
  * Builds the inclusive list of date keys between two Config-sheet date
  * values (e.g. "Prasad Start Date" / "Prasad End Date").
  */
-function getDateRangeList(startItem, endItem) {
-  const start = toDateObject(getConfigValue(startItem));
-  const end = toDateObject(getConfigValue(endItem));
+function getDateRangeList(ss, startItem, endItem) {
+  const start = toDateObject(getConfigValue(ss, startItem));
+  const end = toDateObject(getConfigValue(ss, endItem));
   if (!start || !end) return [];
 
   const dates = [];
@@ -1004,9 +1004,9 @@ function getDateRangeList(startItem, endItem) {
  * registrations per (date, period) — counts only, no registrant identity.
  */
 function getPrasadData() {
-  const dates = getDateRangeList('Prasad Start Date', 'Prasad End Date');
-
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const dates = getDateRangeList(ss, 'Prasad Start Date', 'Prasad End Date');
+
   const sheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.PRASAD);
   const counts = {};
 
@@ -1033,12 +1033,31 @@ function getPrasadData() {
  * Saves a Prasad seva registration — always appends (many people can sign up
  * for the same date/period), no uniqueness constraint.
  */
+/**
+ * No Morning seva slot on the very first day of the range, and no Evening
+ * slot on the very last day — the puja typically starts partway through day
+ * one and wraps up before evening on the final day.
+ */
+function isValidSevaSlot(dates, date, period) {
+  if (!dates || !dates.length) return false;
+  const idx = dates.indexOf(date);
+  if (idx === -1) return false;
+  if (idx === 0 && period === 'Morning') return false;
+  if (idx === dates.length - 1 && period === 'Evening') return false;
+  return true;
+}
+
 function savePrasadRegistration(payload) {
   if (!payload || !payload.name || !payload.mobile || !payload.building || !payload.flat || !payload.date || !payload.period) {
     throw new Error('Name, Mobile, Building, Flat, Date and Period are required.');
   }
 
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const dates = getDateRangeList(ss, 'Prasad Start Date', 'Prasad End Date');
+  if (!isValidSevaSlot(dates, payload.date, payload.period)) {
+    throw new Error('That slot is not available for Prasad seva.');
+  }
+
   const sheet = getOrCreateSheet(ss, CONFIG.SHEETS.PRASAD, [
     'Entry Date', 'Name', 'Mobile', 'Building', 'Flat', 'Prasad Date', 'Period'
   ]);
@@ -1083,9 +1102,9 @@ function savePrasadRegistration(payload) {
  * timestamp for the UI to display a countdown/lock message.
  */
 function getSariData() {
-  const dates = getDateRangeList('Sari Start Date', 'Sari End Date');
-
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const dates = getDateRangeList(ss, 'Sari Start Date', 'Sari End Date');
+
   const sheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.SARI);
   const claimed = {};
 
@@ -1117,12 +1136,17 @@ function saveSariRegistration(payload) {
     throw new Error('Name, Mobile, Building, Flat, Date and Period are required.');
   }
 
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sariDates = getDateRangeList(ss, 'Sari Start Date', 'Sari End Date');
+  if (!isValidSevaSlot(sariDates, payload.date, payload.period)) {
+    throw new Error('That slot is not available for Sari seva.');
+  }
+
   const isAdmin = payload.adminEmail ? isRegisteredAdminEmail(payload.adminEmail) : false;
   if (!isAdmin && new Date() < SARI_UNLOCK_TIMESTAMP) {
     throw new Error('Sari registration opens on 4 Oct 2026 at midnight.');
   }
 
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = getOrCreateSheet(ss, CONFIG.SHEETS.SARI, [
     'Entry Date', 'Name', 'Mobile', 'Building', 'Flat', 'Sari Date', 'Period', 'Color'
   ]);
