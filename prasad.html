@@ -11,7 +11,7 @@
     body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
     .wrap{width:min(900px,calc(100% - 28px));margin:auto}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0}
-    .site-nav-bar{background:linear-gradient(135deg,#0B4240 0%,#082F2E 100%);width:100%}
+    .site-nav-bar{background:linear-gradient(135deg,#0B4240 0%,#082F2E 100%);width:100%;border-radius:14px;margin-bottom:20px}
     .site-nav-inner{max-width:1180px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:12px 16px;scrollbar-width:none}
     .site-nav-inner::-webkit-scrollbar{display:none}
     .site-nav-link{color:rgba(255,255,255,.72);text-decoration:none;font-weight:700;font-size:.85rem;padding:9px 14px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;transition:.15s;flex-shrink:0}
@@ -58,6 +58,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+  <header class="wrap topbar"><a class="brand" href="index.html">Nyati Elan Cultural Forum</a><a class="back" href="app.html">Open community hub →</a></header>
   <nav class="site-nav-bar">
     <div class="site-nav-inner">
       <a href="app.html#admin" class="site-nav-link"><i class="fas fa-user-shield"></i> Admin</a>
@@ -72,7 +73,6 @@
     </div>
   </nav>
 
-  <header class="wrap topbar"><a class="brand" href="index.html">Nyati Elan Cultural Forum</a><a class="back" href="app.html">Open community hub →</a></header>
   <main class="wrap">
     <section class="intro"><div class="eyebrow">Durga Puja seva</div><h1>Prasad Seva</h1><p>Sign up to help with morning or evening Prasad on any day.</p></section>
     <section id="days-container"><div class="skeleton"></div></section>
@@ -128,22 +128,26 @@
         container.innerHTML='<div class="state">No Prasad dates configured yet. Ask an admin to set them in the Config sheet.</div>';
         return;
       }
-      container.innerHTML=dates.map(date=>`
+      container.innerHTML=dates.map((date,idx)=>{
+        const isFirstDay=idx===0, isLastDay=idx===dates.length-1;
+        const periods=['Morning','Evening'].filter(p=>!(isFirstDay&&p==='Morning')&&!(isLastDay&&p==='Evening'));
+        return `
         <div class="day-section">
           <div class="day-heading">${displayDate(date)}</div>
           <div class="period-grid">
-            ${['Morning','Evening'].map(period=>{
+            ${periods.map(period=>{
               const count=counts[`${date}|${period}`]||0;
+              const spanStyle=periods.length===1?'style="grid-column:1 / -1"':'';
               return `
-              <button type="button" class="period-tile" data-date="${date}" data-period="${period}">
+              <button type="button" class="period-tile" ${spanStyle} data-date="${date}" data-period="${period}">
                 <div class="p-name">${period}</div>
                 <div class="p-count">${count}</div>
                 <div class="p-label">${count===1?'person':'people'} registered</div>
               </button>`;
             }).join('')}
           </div>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
 
       container.querySelectorAll('.period-tile').forEach(btn=>{
         btn.addEventListener('click',()=>openModal(btn.dataset.date,btn.dataset.period));
