@@ -11,7 +11,7 @@
     body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
     .wrap{width:min(1180px,calc(100% - 28px));margin:auto}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0}
-    .site-nav-bar{background:linear-gradient(135deg,#0B4240 0%,#082F2E 100%);width:100%}
+    .site-nav-bar{background:linear-gradient(135deg,#0B4240 0%,#082F2E 100%);width:100%;border-radius:14px;margin-bottom:20px}
     .site-nav-inner{max-width:1180px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:12px 16px;scrollbar-width:none}
     .site-nav-inner::-webkit-scrollbar{display:none}
     .site-nav-link{color:rgba(255,255,255,.72);text-decoration:none;font-weight:700;font-size:.85rem;padding:9px 14px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;transition:.15s;flex-shrink:0}
@@ -73,6 +73,14 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+  <header class="wrap topbar">
+    <a class="brand" href="index.html">Nyati Elan Cultural Forum</a>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span id="admin-status" class="back hidden"></span>
+      <button type="button" id="admin-signin-link" class="back" style="background:none;border:none;cursor:pointer;font:inherit" onclick="openAdminLogin()">Admin sign-in</button>
+      <a class="back" href="app.html">Open community hub →</a>
+    </div>
+  </header>
   <nav class="site-nav-bar">
     <div class="site-nav-inner">
       <a href="app.html#admin" class="site-nav-link"><i class="fas fa-user-shield"></i> Admin</a>
@@ -87,14 +95,6 @@
     </div>
   </nav>
 
-  <header class="wrap topbar">
-    <a class="brand" href="index.html">Nyati Elan Cultural Forum</a>
-    <div style="display:flex;align-items:center;gap:16px">
-      <span id="admin-status" class="back hidden"></span>
-      <button type="button" id="admin-signin-link" class="back" style="background:none;border:none;cursor:pointer;font:inherit" onclick="openAdminLogin()">Admin sign-in</button>
-      <a class="back" href="app.html">Open community hub →</a>
-    </div>
-  </header>
   <main class="wrap">
     <section class="intro"><div class="eyebrow">Community seva</div><h1>Annadan</h1><p>See what's still needed for the community feast — tap an item to pledge it, or bring your own.</p></section>
     <section class="panel" aria-live="polite">
