@@ -483,6 +483,34 @@
 
             <!-- TAB 2: RESIDENT / FINANCE VIEW -->
             <main id="resident-view" class="hidden bg-white rounded-2xl shadow-lg p-6 space-y-8">
+
+                <!-- Net Balance banner -->
+                <div class="bg-gradient-to-br from-[#1B4D36] to-[#256648] text-white rounded-2xl p-6 flex items-center justify-between gap-4 shadow-md">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-white/75">Net Balance Available</p>
+                        <p id="net-balance-banner" class="text-3xl md:text-4xl font-bold mt-1">₹0</p>
+                        <p class="text-sm text-white/70 mt-1">Collection minus expenses, live</p>
+                    </div>
+                    <div class="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center text-2xl flex-shrink-0">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                </div>
+
+                <!-- Overall progress -->
+                <div class="bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="font-semibold text-gray-800">Overall Society Progress</p>
+                        <p id="overall-progress-pct" class="font-bold text-indigo-700">0%</p>
+                    </div>
+                    <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div id="overall-progress-bar" class="h-full bg-gradient-to-r from-amber-400 to-[#146F6C] rounded-full transition-all duration-500" style="width:0%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-2">
+                        <span id="overall-progress-paid-label">0 flats paid</span>
+                        <span id="overall-progress-remaining-label">0 flats remaining</span>
+                    </div>
+                </div>
+
                 <div id="financial-summary-section" class="hidden">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                         <i class="fas fa-wallet text-indigo-600"></i> Financial Summary
@@ -514,6 +542,40 @@
                             <p id="final-balance" class="text-2xl md:text-3xl font-bold text-[#1B4D36] mt-1">₹0</p>
                         </div>
                     </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mt-4">
+                        <div class="bg-white border border-gray-200 p-4 rounded-xl">
+                            <p class="text-xs md:text-sm font-medium text-gray-600">Flats Contributed</p>
+                            <p id="stat-flats-contributed" class="text-xl md:text-2xl font-bold text-gray-900 mt-1">0 / 0</p>
+                            <p id="stat-flats-pct" class="text-xs text-[#256648] font-semibold mt-0.5">0% completion</p>
+                        </div>
+                        <div class="bg-white border border-gray-200 p-4 rounded-xl">
+                            <p class="text-xs md:text-sm font-medium text-gray-600">UPI Collection</p>
+                            <p id="stat-upi-amount" class="text-xl md:text-2xl font-bold text-gray-900 mt-1">₹0</p>
+                            <p id="stat-upi-count" class="text-xs text-gray-500 mt-0.5">0 transactions</p>
+                        </div>
+                        <div class="bg-white border border-gray-200 p-4 rounded-xl">
+                            <p class="text-xs md:text-sm font-medium text-gray-600">Cash Collection</p>
+                            <p id="stat-cash-amount" class="text-xl md:text-2xl font-bold text-gray-900 mt-1">₹0</p>
+                            <p id="stat-cash-count" class="text-xs text-gray-500 mt-0.5">0 receipts</p>
+                        </div>
+                        <div class="bg-white border border-gray-200 p-4 rounded-xl">
+                            <p class="text-xs md:text-sm font-medium text-gray-600">Avg Contribution</p>
+                            <p id="stat-avg-contribution" class="text-xl md:text-2xl font-bold text-gray-900 mt-1">₹0</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Per contributing flat</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live activity feed -->
+                <div class="border-t pt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <i class="fas fa-clock text-indigo-600"></i> Latest Collection Receipts
+                        </h2>
+                        <span class="text-xs text-gray-400 font-medium">Most recent first</span>
+                    </div>
+                    <div id="recent-activity-feed" class="space-y-2 max-h-80 overflow-y-auto"></div>
                 </div>
 
                 <div class="border-t pt-8">
@@ -545,22 +607,22 @@
                                     <p id="festival-detail-total" class="text-xl font-bold text-gray-900"></p>
                                 </div>
                             </div>
-                            <div class="overflow-x-auto rounded-xl border border-gray-200">
-                                <table class="min-w-full bg-white divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr id="expense-header-row"></tr>
-                                    </thead>
-                                    <tbody id="expense-table-body" class="divide-y divide-gray-200"></tbody>
-                                </table>
+                            <div class="mb-4">
+                                <div class="relative">
+                                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                                    <input type="search" id="expense-search-input" oninput="renderExpenseCards()"
+                                        placeholder="Search item, volunteer, receipt, or notes…"
+                                        class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
                             </div>
+                            <div id="expense-card-list" class="space-y-2.5"></div>
                         </div>
                     </div>
 
                     <!-- Building Collections Subview -->
                     <div id="building-collection-view" class="hidden">
-                        <!-- Level 1: one tile per building -->
-                        <div id="building-tiles-level">
-                            <div class="flex flex-wrap items-center gap-2 mb-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EAF5EF] text-[#256648] text-sm font-semibold">
                                     <span class="w-2 h-2 rounded-full bg-[#2F7A5C]"></span> Paid Flats: <span id="overall-paid-count">0</span>
                                 </span>
@@ -568,38 +630,15 @@
                                     <span class="w-2 h-2 rounded-full bg-[#D98E04]"></span> Unpaid Flats: <span id="overall-unpaid-count">0</span>
                                 </span>
                             </div>
-                            <div id="building-tiles-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
-                        </div>
-                        <!-- Level 2: one tile per flat in the selected building -->
-                        <div id="flat-tiles-level" class="hidden">
-                            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                                <button type="button" onclick="showBuildingTiles()"
-                                    class="text-sm font-semibold text-indigo-600 hover:underline flex items-center gap-1.5">
-                                    <i class="fas fa-arrow-left"></i> Back to buildings
-                                </button>
-                                <div class="text-right">
-                                    <p id="building-detail-label" class="text-xs font-semibold text-indigo-600 uppercase tracking-wide"></p>
-                                    <p id="building-detail-total" class="text-xl font-bold text-gray-900"></p>
-                                    <div class="flex items-center gap-2 mt-1 justify-end">
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EAF5EF] text-[#256648] text-xs font-semibold">Paid <span id="building-detail-paid">0</span></span>
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FBEDCB] text-[#8A5A0B] text-xs font-semibold">Unpaid <span id="building-detail-unpaid">0</span></span>
-                                    </div>
-                                </div>
+                            <div class="flex items-center gap-1.5 text-xs">
+                                <span class="text-gray-500 font-medium mr-1">Sort by:</span>
+                                <button type="button" id="sort-btn-collection" onclick="setBuildingSort('collection')" class="px-3 py-1.5 rounded-full font-semibold transition"></button>
+                                <button type="button" id="sort-btn-paid" onclick="setBuildingSort('paid')" class="px-3 py-1.5 rounded-full font-semibold transition"></button>
+                                <button type="button" id="sort-btn-name" onclick="setBuildingSort('name')" class="px-3 py-1.5 rounded-full font-semibold transition"></button>
                             </div>
-                            <div class="flex items-center gap-3 text-xs text-gray-600 mb-3">
-                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-[#2F7A5C]"></span> Paid</span>
-                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-[#D98E04]"></span> Unpaid</span>
-                            </div>
-                            <div id="flat-tiles-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5"></div>
                         </div>
-                        <!-- Level 3: detail for the selected flat -->
-                        <div id="flat-detail-level" class="hidden">
-                            <button type="button" onclick="backToFlatTiles()"
-                                class="text-sm font-semibold text-indigo-600 hover:underline flex items-center gap-1.5 mb-4">
-                                <i class="fas fa-arrow-left"></i> Back to flats
-                            </button>
-                            <div id="flat-detail-content" class="bg-gray-50 border border-gray-200 rounded-xl p-5 max-w-md"></div>
-                        </div>
+                        <p class="text-xs text-gray-400 mb-3">Click any building row to expand its flat matrix.</p>
+                        <div id="building-tiles-grid" class="space-y-3"></div>
                     </div>
                 </div>
             </main>
@@ -722,6 +761,54 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Digital Contribution Receipt Modal -->
+    <div id="receipt-modal-overlay" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[70] items-center justify-center p-3">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] overflow-y-auto">
+            <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-5 rounded-t-2xl flex items-start justify-between">
+                <div>
+                    <p class="font-bold text-lg flex items-center gap-2"><i class="fas fa-receipt"></i> Digital Contribution Receipt</p>
+                    <p class="text-xs text-white/70 mt-0.5">Nyati Elan Cultural Forum</p>
+                </div>
+                <button onclick="closeReceiptModal()" class="text-white/70 hover:text-white"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="p-5">
+                <div class="border-2 border-dashed border-amber-300 rounded-2xl p-5 bg-amber-50/40">
+                    <div class="text-center mb-4">
+                        <span class="text-xs font-semibold text-amber-700 bg-amber-100 inline-block px-3 py-1 rounded-full">🙏 Shree Ganeshay Namah</span>
+                        <h3 class="text-xl font-bold text-gray-900 mt-3">Nyati Elan Cultural Forum</h3>
+                        <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wide mt-1">Ganeshotsav — Official Contribution Slip</p>
+                    </div>
+                    <div class="bg-white/70 rounded-xl p-3 mb-4 text-sm">
+                        <p><span class="text-gray-500">Receipt:</span> <span class="font-bold text-gray-800" id="receipt-number"></span></p>
+                        <p class="text-gray-500 mt-1"><i class="fas fa-calendar"></i> <span id="receipt-datetime"></span></p>
+                    </div>
+                    <dl class="space-y-2 text-sm mb-4">
+                        <div class="flex justify-between"><dt class="text-gray-500">Building & Flat</dt><dd class="font-bold text-gray-900" id="receipt-flat"></dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-500">Resident Name</dt><dd class="font-semibold text-gray-800" id="receipt-name"></dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-500">Contact</dt><dd class="font-medium text-gray-700" id="receipt-phone"></dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-500">Payment Mode</dt><dd><span class="px-2 py-0.5 bg-gray-100 rounded text-xs font-semibold" id="receipt-mode"></span></dd></div>
+                    </dl>
+                    <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl p-4 text-center mb-3">
+                        <p class="text-xs uppercase tracking-wide text-white/70">Amount Received</p>
+                        <p class="text-3xl font-bold mt-1" id="receipt-amount"></p>
+                        <p class="text-xs italic text-white/80 mt-1" id="receipt-amount-words"></p>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-dashed border-gray-300">
+                        <span>Collected by: <b class="text-gray-700" id="receipt-volunteer"></b></span>
+                        <span class="text-[#256648] font-semibold"><i class="fas fa-check-circle"></i> Verified Entry</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-5">
+                    <button onclick="closeReceiptModal()" class="text-gray-600 font-semibold text-sm">Done</button>
+                    <button id="receipt-next-flat-btn" onclick="openNextFlatFromReceipt()"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2">
+                        Next Flat <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1879,7 +1966,8 @@
                 total: fmt(totalFunds),
                 actualExpense: fmt(actualExpenseNum),
                 committedExpense: fmt(committedExpenseNum),
-                balance: fmt(finalBalance)
+                balance: fmt(finalBalance),
+                collectionNum, actualExpenseNum, committedExpenseNum, finalBalanceNum: finalBalance
             };
         }
 
@@ -1890,6 +1978,76 @@
             document.getElementById('actual-expense').innerText = summaryData.actualExpense || '₹0';
             document.getElementById('committed-expense').innerText = summaryData.committedExpense || '₹0';
             document.getElementById('final-balance').innerText = summaryData.balance || '₹0';
+
+            const fmtInr = (n) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
+
+            // Net Balance banner
+            document.getElementById('net-balance-banner').innerText = fmtInr(summaryData.finalBalanceNum);
+
+            // Overall progress: residents only, "Other" (vendors) stays out of this public view
+            const publicResidents = allResidents.filter(r => r.building !== 'Other');
+            const totalCapacity = Object.entries(BUILDINGS)
+                .filter(([name]) => name !== 'Other')
+                .reduce((sum, [, layout]) => sum + (layout.floors * layout.flatsPerFloor), 0);
+            const paidResidents = publicResidents.filter(r => r.status === 'Paid');
+            const paidCount = paidResidents.length;
+            const pct = totalCapacity > 0 ? Math.round((paidCount / totalCapacity) * 100) : 0;
+
+            document.getElementById('overall-progress-pct').innerText = `${pct}%`;
+            document.getElementById('overall-progress-bar').style.width = `${pct}%`;
+            document.getElementById('overall-progress-paid-label').innerText = `${paidCount} flats paid`;
+            document.getElementById('overall-progress-remaining-label').innerText = `${Math.max(totalCapacity - paidCount, 0)} flats remaining`;
+
+            // Flats contributed card
+            document.getElementById('stat-flats-contributed').innerText = `${paidCount} / ${totalCapacity}`;
+            document.getElementById('stat-flats-pct').innerText = `${pct}% completion`;
+
+            // Payment mode breakdown
+            const upi = paidResidents.filter(r => (r.paymentMode || '').toUpperCase() !== 'CASH');
+            const cash = paidResidents.filter(r => (r.paymentMode || '').toUpperCase() === 'CASH');
+            const upiTotal = upi.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+            const cashTotal = cash.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+            document.getElementById('stat-upi-amount').innerText = fmtInr(upiTotal);
+            document.getElementById('stat-upi-count').innerText = `${upi.length} transaction${upi.length === 1 ? '' : 's'}`;
+            document.getElementById('stat-cash-amount').innerText = fmtInr(cashTotal);
+            document.getElementById('stat-cash-count').innerText = `${cash.length} receipt${cash.length === 1 ? '' : 's'}`;
+
+            // Average contribution per paid flat
+            const avgContribution = paidCount > 0 ? (upiTotal + cashTotal) / paidCount : 0;
+            document.getElementById('stat-avg-contribution').innerText = fmtInr(avgContribution);
+
+            renderRecentActivityFeed(paidResidents);
+        }
+
+        function renderRecentActivityFeed(paidResidents) {
+            const feed = document.getElementById('recent-activity-feed');
+            if (!feed) return;
+
+            const recent = [...paidResidents]
+                .filter(r => r.date)
+                .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+                .slice(0, 15);
+
+            if (recent.length === 0) {
+                feed.innerHTML = '<p class="text-sm text-gray-400 text-center py-6">No contributions recorded yet.</p>';
+                return;
+            }
+
+            feed.innerHTML = recent.map(r => {
+                const dateLabel = String(r.date || '').split(' ')[0];
+                return `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                        <div>
+                            <p class="font-semibold text-gray-800 text-sm">${escapeHtml(r.building)}-${escapeHtml(r.flat)}</p>
+                            <p class="text-xs text-gray-500">${r.name ? escapeHtml(r.name) : 'Unassigned'} · ${escapeHtml(r.paymentMode || 'UPI')}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-[#256648] text-sm">₹${Math.round(parseFloat(r.amount) || 0).toLocaleString('en-IN')}</p>
+                            <p class="text-xs text-gray-400">${escapeHtml(dateLabel)}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         let selectedFestivalName = null;
@@ -1910,8 +2068,8 @@
             if (selectedFestivalName && !document.getElementById('festival-detail-level').classList.contains('hidden')) {
                 openFestivalDetail(selectedFestivalName);
             }
-            if (selectedBuildingName && !document.getElementById('flat-tiles-level').classList.contains('hidden')) {
-                openBuildingFlats(selectedBuildingName);
+            if (expandedBuildingName) {
+                renderInlineFlatMatrix(expandedBuildingName);
             }
 
             updateEventsView();
@@ -1961,6 +2119,8 @@
             });
         }
 
+        let currentFestivalExpenses = [];
+
         function openFestivalDetail(festivalName) {
             selectedFestivalName = festivalName;
             document.getElementById('festival-tiles-level').classList.add('hidden');
@@ -1968,40 +2128,61 @@
             document.getElementById('festival-detail-label').textContent = festivalName;
 
             const categoryHeader = getExpenseCategoryHeader();
-            const filteredExpenses = categoryHeader
+            currentFestivalExpenses = categoryHeader
                 ? allExpenses.filter(exp => (String(exp[categoryHeader] || '').trim() || 'Uncategorized') === festivalName)
                 : allExpenses;
 
-            document.getElementById('festival-detail-total').textContent = formatInr(filteredExpenses.reduce((a, e) => a + (parseFloat(e['Total']) || 0), 0));
+            document.getElementById('festival-detail-total').textContent = formatInr(currentFestivalExpenses.reduce((a, e) => a + (parseFloat(e['Total']) || 0), 0));
+            document.getElementById('expense-search-input').value = '';
+            renderExpenseCards();
+        }
 
-            const headersToDisplay = expenseHeaders.filter(header => header.toLowerCase().trim() !== 'volunteer name');
-            const expenseHeaderRow = document.getElementById('expense-header-row');
-            const expenseTableBody = document.getElementById('expense-table-body');
+        function renderExpenseCards() {
+            const query = (document.getElementById('expense-search-input').value || '').trim().toLowerCase();
+            const list = document.getElementById('expense-card-list');
 
-            expenseHeaderRow.innerHTML = headersToDisplay.length > 0
-                ? headersToDisplay.map(header => `<th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">${escapeHtml(header)}</th>`).join('')
-                : '';
+            const filtered = currentFestivalExpenses.filter(exp => {
+                if (!query) return true;
+                const haystack = Object.values(exp).join(' ').toLowerCase();
+                return haystack.includes(query);
+            });
 
-            if (filteredExpenses.length === 0) {
-                expenseTableBody.innerHTML = `<tr><td colspan="${headersToDisplay.length || 1}" class="text-center py-6 text-gray-500">No expenses recorded for this selection.</td></tr>`;
-            } else {
-                expenseTableBody.innerHTML = filteredExpenses.map(exp => {
-                    const cells = headersToDisplay.map(header => {
-                        const isNumeric = header === 'Total' || header === 'Given' || header === 'Pending';
-                        const rawValue = String(exp[header] || '');
-                        let cellContent;
-                        if (/^https?:\/\//i.test(rawValue.trim())) {
-                            const linkLabel = header.toLowerCase().includes('receipt') || header.toLowerCase().includes('bill') || header.toLowerCase().includes('photo')
-                                ? 'View Receipt' : 'Open Link';
-                            cellContent = `<a href="${escapeHtml(rawValue.trim())}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-medium inline-flex items-center gap-1"><i class="fas fa-arrow-up-right-from-square text-xs"></i> ${linkLabel}</a>`;
-                        } else {
-                            cellContent = escapeHtml(rawValue);
-                        }
-                        return `<td class="py-3 px-4 text-sm ${isNumeric ? 'text-right font-medium' : 'text-left'}">${cellContent}</td>`;
-                    }).join('');
-                    return `<tr class="hover:bg-gray-50">${cells}</tr>`;
-                }).join('');
+            if (filtered.length === 0) {
+                list.innerHTML = `<p class="text-center py-8 text-gray-500 text-sm">No expenses match this search.</p>`;
+                return;
             }
+
+            list.innerHTML = filtered.map(exp => {
+                const item = exp['Item'] || 'Untitled expense';
+                const festival = exp['Festival'] || '';
+                const total = parseFloat(exp['Total']) || 0;
+                const given = parseFloat(exp['Given']) || 0;
+                const pending = parseFloat(exp['Pending']) || 0;
+                const volunteer = exp['Volunteer'] || exp['Volunteer Name'] || '';
+                const receiptHeader = Object.keys(exp).find(h => /^https?:\/\//i.test(String(exp[h] || '').trim()));
+                const receiptUrl = receiptHeader ? String(exp[receiptHeader]).trim() : '';
+
+                return `
+                    <div class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                ${festival ? `<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 inline-block mb-1.5">${escapeHtml(festival)}</span>` : ''}
+                                <p class="font-bold text-gray-900 truncate">${escapeHtml(item)}</p>
+                                <div class="flex items-center gap-3 text-xs text-gray-500 mt-1 flex-wrap">
+                                    ${volunteer ? `<span><i class="fas fa-user text-gray-400"></i> ${escapeHtml(volunteer)}</span>` : ''}
+                                    ${receiptUrl ? `<a href="${escapeHtml(receiptUrl)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-medium"><i class="fas fa-arrow-up-right-from-square"></i> View Receipt</a>` : ''}
+                                </div>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <p class="font-bold text-gray-900">${formatInr(total)}</p>
+                                ${pending > 0
+                                    ? `<p class="text-xs text-amber-600 font-semibold mt-0.5">${formatInr(pending)} pending</p>`
+                                    : `<p class="text-xs text-[#256648] font-semibold mt-0.5">Fully paid</p>`}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function showFestivalTiles() {
@@ -2024,16 +2205,39 @@
 
         // --- Building Collections: tile grid (Level 1) -> flat tiles (Level 2) -> flat detail (Level 3) ---
 
+        let buildingSortMode = 'collection';
+        let expandedBuildingName = null;
+
+        function setBuildingSort(mode) {
+            buildingSortMode = mode;
+            renderBuildingTiles();
+        }
+
         function renderBuildingTiles() {
             const grid = document.getElementById('building-tiles-grid');
             // "Other" (vendor / non-resident contributions) is admin-only for now —
             // excluded from this public-facing view entirely, including the overall counts.
             const publicResidents = allResidents.filter(r => r.building !== 'Other');
-            const tiles = Object.keys(BUILDINGS).filter(name => name !== 'Other').map(name => {
+            let tiles = Object.keys(BUILDINGS).filter(name => name !== 'Other').map(name => {
+                const layout = BUILDINGS[name];
+                const totalFlats = layout.floors * layout.flatsPerFloor;
                 const residentsInBuilding = publicResidents.filter(r => r.building === name);
                 const total = residentsInBuilding.reduce((a, r) => a + (r.status === 'Paid' ? r.amount : 0), 0);
                 const paidCount = residentsInBuilding.filter(r => r.status === 'Paid').length;
-                return { name, total, paidCount, recordedCount: residentsInBuilding.length };
+                const pct = totalFlats > 0 ? Math.round((paidCount / totalFlats) * 100) : 0;
+                return { name, total, paidCount, totalFlats, pct, pending: Math.max(totalFlats - paidCount, 0) };
+            });
+
+            if (buildingSortMode === 'collection') tiles.sort((a, b) => b.total - a.total);
+            else if (buildingSortMode === 'paid') tiles.sort((a, b) => b.paidCount - a.paidCount);
+            else tiles.sort((a, b) => a.name.localeCompare(b.name));
+
+            // Highlight active sort button
+            ['collection', 'paid', 'name'].forEach(mode => {
+                const btn = document.getElementById(`sort-btn-${mode}`);
+                const label = mode === 'collection' ? 'Collection' : mode === 'paid' ? 'Flats Paid' : 'Building Name';
+                btn.textContent = label;
+                btn.className = `px-3 py-1.5 rounded-full font-semibold transition ${buildingSortMode === mode ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`;
             });
 
             const overallPaidCount = publicResidents.filter(r => r.status === 'Paid').length;
@@ -2041,39 +2245,83 @@
             document.getElementById('overall-paid-count').textContent = overallPaidCount;
             document.getElementById('overall-unpaid-count').textContent = overallUnpaidCount;
 
-            grid.innerHTML = tiles.map(t => `
-                <button type="button" data-building="${escapeHtml(t.name)}"
-                    class="building-tile text-left bg-white border border-indigo-100 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
-                    <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wide">${escapeHtml(t.name)}</p>
-                    <p class="text-xl font-bold text-gray-900 mt-2">${formatInr(t.total)}</p>
-                    <p class="text-xs text-gray-500 mt-1">${t.paidCount}/${t.recordedCount} paid</p>
-                </button>
-            `).join('');
+            grid.innerHTML = tiles.map(t => {
+                const isExpanded = expandedBuildingName === t.name;
+                return `
+                <div class="border border-gray-200 rounded-2xl overflow-hidden">
+                    <button type="button" data-building="${escapeHtml(t.name)}"
+                        class="building-row-toggle w-full text-left p-4 hover:bg-gray-50 transition flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center flex-shrink-0 text-xs text-center leading-tight">${escapeHtml(t.name)}</div>
+                        <div class="flex-grow min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <p class="font-bold text-gray-800">Building ${escapeHtml(t.name)}</p>
+                                ${t.pct >= 80 ? '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EAF5EF] text-[#256648]"><i class="fas fa-star"></i> High Turnout</span>' : ''}
+                            </div>
+                            <p class="text-xs text-gray-500 mt-0.5">${t.paidCount} of ${t.totalFlats} Flats Paid (${t.pct}%)</p>
+                            <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-2">
+                                <div class="h-full bg-gradient-to-r from-amber-400 to-[#146F6C] rounded-full" style="width:${t.pct}%"></div>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="font-bold text-gray-900">${formatInr(t.total)}</p>
+                            <p class="text-xs text-gray-400">${t.pending} pending</p>
+                        </div>
+                        <i class="fas fa-chevron-down text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}" id="chevron-${escapeHtml(t.name)}"></i>
+                    </button>
+                    <div id="building-row-body-${escapeHtml(t.name)}" class="${isExpanded ? '' : 'hidden'} border-t border-gray-100 p-4 bg-gray-50/60"></div>
+                </div>
+            `;
+            }).join('');
 
-            grid.querySelectorAll('.building-tile').forEach(btn => {
-                btn.addEventListener('click', () => openBuildingFlats(btn.dataset.building));
+            grid.querySelectorAll('.building-row-toggle').forEach(btn => {
+                btn.addEventListener('click', () => toggleBuildingRow(btn.dataset.building));
             });
         }
 
-        function openBuildingFlats(buildingName) {
-            selectedBuildingName = buildingName;
-            document.getElementById('building-tiles-level').classList.add('hidden');
-            document.getElementById('flat-detail-level').classList.add('hidden');
-            document.getElementById('flat-tiles-level').classList.remove('hidden');
-            document.getElementById('building-detail-label').textContent = buildingName;
+        function toggleBuildingRow(buildingName) {
+            const body = document.getElementById(`building-row-body-${buildingName}`);
+            const chevron = document.getElementById(`chevron-${buildingName}`);
+            const isOpen = !body.classList.contains('hidden');
 
+            // Single-expand accordion: collapse whatever else was open
+            if (expandedBuildingName && expandedBuildingName !== buildingName) {
+                const prevBody = document.getElementById(`building-row-body-${expandedBuildingName}`);
+                const prevChevron = document.getElementById(`chevron-${expandedBuildingName}`);
+                if (prevBody) prevBody.classList.add('hidden');
+                if (prevChevron) prevChevron.classList.remove('rotate-180');
+            }
+
+            if (isOpen) {
+                body.classList.add('hidden');
+                chevron.classList.remove('rotate-180');
+                expandedBuildingName = null;
+            } else {
+                body.classList.remove('hidden');
+                chevron.classList.add('rotate-180');
+                expandedBuildingName = buildingName;
+                renderInlineFlatMatrix(buildingName);
+            }
+        }
+
+        function renderInlineFlatMatrix(buildingName) {
+            selectedBuildingName = buildingName;
             currentBuildingResidents = allResidents
                 .filter(r => r.building === buildingName)
                 .sort((a, b) => a.flat.localeCompare(b.flat, undefined, { numeric: true }));
 
-            const total = currentBuildingResidents.reduce((a, r) => a + (r.status === 'Paid' ? r.amount : 0), 0);
-            document.getElementById('building-detail-total').textContent = formatInr(total);
-            document.getElementById('building-detail-paid').textContent = currentBuildingResidents.filter(r => r.status === 'Paid').length;
-            document.getElementById('building-detail-unpaid').textContent = currentBuildingResidents.filter(r => r.status !== 'Paid').length;
+            const body = document.getElementById(`building-row-body-${buildingName}`);
+            body.innerHTML = `
+                <div class="flex items-center gap-3 text-xs text-gray-600 mb-3">
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-[#2F7A5C]"></span> Paid</span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-[#D98E04]"></span> Unpaid</span>
+                </div>
+                <div id="inline-flat-grid-${buildingName}" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5"></div>
+                <div id="inline-flat-detail-${buildingName}" class="hidden mt-3"></div>
+            `;
 
-            const flatGrid = document.getElementById('flat-tiles-grid');
+            const flatGrid = document.getElementById(`inline-flat-grid-${buildingName}`);
             if (currentBuildingResidents.length === 0) {
-                flatGrid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">No collection records for this building yet.</p>`;
+                flatGrid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-6 text-sm">No collection records for this building yet.</p>`;
                 return;
             }
 
@@ -2081,68 +2329,61 @@
                 const isPaid = r.status === 'Paid';
                 return `
                     <button type="button" data-flat-idx="${idx}"
-                        class="collection-flat-tile text-center rounded-xl px-2 py-3 font-semibold text-sm transition-all hover:-translate-y-0.5 ${isPaid ? 'bg-[#2F7A5C] text-white hover:bg-[#256648]' : 'bg-[#FBEDCB] text-[#8A5A0B] hover:bg-[#F6DFA3]'}">
+                        class="inline-flat-tile text-center rounded-xl px-2 py-3 font-semibold text-sm transition-all hover:-translate-y-0.5 ${isPaid ? 'bg-[#2F7A5C] text-white hover:bg-[#256648]' : 'bg-[#FBEDCB] text-[#8A5A0B] hover:bg-[#F6DFA3]'}">
                         <span class="block">${escapeHtml(r.flat)}</span>
                         <span class="block text-xs font-medium mt-1 ${isPaid ? 'text-white/85' : 'text-[#8A5A0B]/80'}">${r.amount > 0 ? formatInr(r.amount) : '—'}</span>
                     </button>
                 `;
             }).join('');
 
-            flatGrid.querySelectorAll('.collection-flat-tile').forEach(btn => {
-                btn.addEventListener('click', () => openFlatDetail(parseInt(btn.dataset.flatIdx, 10)));
+            flatGrid.querySelectorAll('.inline-flat-tile').forEach(btn => {
+                btn.addEventListener('click', () => openInlineFlatDetail(buildingName, parseInt(btn.dataset.flatIdx, 10)));
             });
         }
 
-        function showBuildingTiles() {
-            selectedBuildingName = null;
-            document.getElementById('flat-tiles-level').classList.add('hidden');
-            document.getElementById('flat-detail-level').classList.add('hidden');
-            document.getElementById('building-tiles-level').classList.remove('hidden');
-        }
-
-        function openFlatDetail(idx) {
+        function openInlineFlatDetail(buildingName, idx) {
             const r = currentBuildingResidents[idx];
             if (!r) return;
-            document.getElementById('flat-tiles-level').classList.add('hidden');
-            document.getElementById('flat-detail-level').classList.remove('hidden');
-
+            const detailDiv = document.getElementById(`inline-flat-detail-${buildingName}`);
             const isPaid = r.status === 'Paid';
-            document.getElementById('flat-detail-content').innerHTML = `
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">${escapeHtml(r.building)}-${escapeHtml(r.flat)}</h3>
-                    <span class="px-3 py-1 text-xs font-semibold rounded-full ${isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${escapeHtml(r.status)}</span>
+            detailDiv.classList.remove('hidden');
+            detailDiv.innerHTML = `
+                <div class="bg-white border border-gray-200 rounded-xl p-4">
+                    <button type="button" onclick="document.getElementById('inline-flat-detail-${buildingName}').classList.add('hidden')"
+                        class="text-xs font-semibold text-indigo-600 hover:underline mb-3 flex items-center gap-1">
+                        <i class="fas fa-arrow-left"></i> Close
+                    </button>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-bold text-gray-900">${escapeHtml(r.building)}-${escapeHtml(r.flat)}</h3>
+                        <span class="px-3 py-1 text-xs font-semibold rounded-full ${isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${escapeHtml(r.status)}</span>
+                    </div>
+                    <dl class="space-y-3 text-sm">
+                        <div class="flex justify-between border-b border-gray-100 pb-2">
+                            <dt class="text-gray-500">Resident</dt>
+                            <dd class="font-medium text-gray-800">${r.name ? escapeHtml(r.name) : 'Unassigned'}</dd>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-100 pb-2">
+                            <dt class="text-gray-500">Amount</dt>
+                            <dd class="font-semibold text-gray-900">${r.amount > 0 ? formatInr(r.amount) : '—'}</dd>
+                        </div>
+                        ${isPaid ? `
+                        <div class="flex justify-between border-b border-gray-100 pb-2">
+                            <dt class="text-gray-500">Payment Mode</dt>
+                            <dd class="font-medium text-gray-800">${escapeHtml(r.paymentMode || 'UPI')}</dd>
+                        </div>` : ''}
+                        ${r.date ? `
+                        <div class="flex justify-between border-b border-gray-100 pb-2">
+                            <dt class="text-gray-500">Date</dt>
+                            <dd class="font-medium text-gray-800">${escapeHtml(r.date)}</dd>
+                        </div>` : ''}
+                        ${r.comments ? `
+                        <div class="flex justify-between gap-4">
+                            <dt class="text-gray-500 shrink-0">Note</dt>
+                            <dd class="font-medium text-gray-800 text-right">${escapeHtml(r.comments)}</dd>
+                        </div>` : ''}
+                    </dl>
                 </div>
-                <dl class="space-y-3 text-sm">
-                    <div class="flex justify-between border-b border-gray-200 pb-2">
-                        <dt class="text-gray-500">Resident</dt>
-                        <dd class="font-medium text-gray-800">${r.name ? escapeHtml(r.name) : 'Unassigned'}</dd>
-                    </div>
-                    <div class="flex justify-between border-b border-gray-200 pb-2">
-                        <dt class="text-gray-500">Amount</dt>
-                        <dd class="font-semibold text-gray-900">${r.amount > 0 ? formatInr(r.amount) : '—'}</dd>
-                    </div>
-                    ${isPaid ? `
-                    <div class="flex justify-between border-b border-gray-200 pb-2">
-                        <dt class="text-gray-500">Payment Mode</dt>
-                        <dd class="font-medium text-gray-800">${escapeHtml(r.paymentMode || 'UPI')}</dd>
-                    </div>` : ''}
-                    ${r.date ? `
-                    <div class="flex justify-between border-b border-gray-200 pb-2">
-                        <dt class="text-gray-500">Date</dt>
-                        <dd class="font-medium text-gray-800">${escapeHtml(r.date)}</dd>
-                    </div>` : ''}
-                    ${r.comments ? `
-                    <div class="flex justify-between gap-4">
-                        <dt class="text-gray-500 shrink-0">Note</dt>
-                        <dd class="font-medium text-gray-800 text-right">${escapeHtml(r.comments)}</dd>
-                    </div>` : ''}
-                </dl>
             `;
-        }
-
-        function backToFlatTiles() {
-            document.getElementById('flat-detail-level').classList.add('hidden');
-            document.getElementById('flat-tiles-level').classList.remove('hidden');
         }
 
         function updateEventsView() {
@@ -2848,6 +3089,71 @@
             }, 300);
         }
 
+        // --- Digital Contribution Receipt ---
+        let receiptContext = null;
+
+        function numberToWordsIndian(num) {
+            num = Math.round(num);
+            if (num === 0) return 'Zero Rupees Only';
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            function twoDigits(n) {
+                if (n < 20) return ones[n];
+                return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+            }
+            function threeDigits(n) {
+                if (n < 100) return twoDigits(n);
+                return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + twoDigits(n % 100) : '');
+            }
+            let result = '';
+            const crore = Math.floor(num / 10000000); num %= 10000000;
+            const lakh = Math.floor(num / 100000); num %= 100000;
+            const thousand = Math.floor(num / 1000); num %= 1000;
+            const rest = num;
+            if (crore) result += threeDigits(crore) + ' Crore ';
+            if (lakh) result += threeDigits(lakh) + ' Lakh ';
+            if (thousand) result += threeDigits(thousand) + ' Thousand ';
+            if (rest) result += threeDigits(rest);
+            return result.trim() + ' Rupees Only';
+        }
+
+        function showDigitalReceipt(residentData, displayAmount) {
+            const now = new Date();
+            const receiptNo = `NE-GANPATI-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+            document.getElementById('receipt-number').textContent = receiptNo;
+            document.getElementById('receipt-datetime').textContent = now.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+            document.getElementById('receipt-flat').textContent = `${residentData.building}-${residentData.flat}`;
+            document.getElementById('receipt-name').textContent = residentData.name || 'Unassigned';
+            document.getElementById('receipt-phone').textContent = residentData.phone ? `+91 ${residentData.phone}` : '—';
+            document.getElementById('receipt-mode').textContent = residentData.paymentMode || 'UPI';
+            document.getElementById('receipt-amount').textContent = `₹${Math.round(displayAmount).toLocaleString('en-IN')}`;
+            document.getElementById('receipt-amount-words').textContent = numberToWordsIndian(displayAmount);
+            document.getElementById('receipt-volunteer').textContent = residentData.recordedBy || 'Admin';
+
+            // "Next Flat" only makes sense for real numbered flats, not vendor/Other entries
+            document.getElementById('receipt-next-flat-btn').style.display = residentData.building === 'Other' ? 'none' : 'inline-flex';
+
+            receiptContext = { building: residentData.building, flat: residentData.flat };
+            document.getElementById('receipt-modal-overlay').classList.remove('hidden');
+            document.getElementById('receipt-modal-overlay').classList.add('flex');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receipt-modal-overlay').classList.add('hidden');
+            document.getElementById('receipt-modal-overlay').classList.remove('flex');
+            receiptContext = null;
+        }
+
+        function openNextFlatFromReceipt() {
+            if (!receiptContext) { closeReceiptModal(); return; }
+            const { building, flat } = receiptContext;
+            closeReceiptModal();
+            const nextFlatNum = parseInt(flat, 10) + 1;
+            if (BUILDINGS[building] && !isNaN(nextFlatNum)) {
+                openResidentModal(building, String(nextFlatNum));
+            }
+        }
+
         async function handleFormSubmit() {
             const selectedResidentBuilding = document.getElementById('resident-building').value;
             if (!canAccessBuilding(selectedResidentBuilding)) {
@@ -2910,6 +3216,10 @@
                 }
 
                 closeResidentModal();
+
+                if (residentData.status === 'Paid') {
+                    showDigitalReceipt(residentData, isAdditionalPayment ? enteredAmount : finalTotalAmount);
+                }
             } catch (submitErr) {
                 console.error('Could not save the payment:', submitErr);
                 showNotification(submitErr.message || 'Could not save the payment. Please retry.', true);
