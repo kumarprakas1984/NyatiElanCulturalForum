@@ -322,8 +322,8 @@
       $('days-container').innerHTML=allDates.map((date,idx)=>{
         const color=SARI_DAY_COLORS[date]||'';
         const hex=COLOR_HEX[color]||'#D0C4AE';
-        const isFirstDay=idx===0, isLastDay=idx===allDates.length-1;
-        const periods=['Morning','Evening'].filter(p=>!(isFirstDay&&p==='Morning')&&!(isLastDay&&p==='Evening'));
+        const isFirstDay=idx===0;
+        const periods=['Morning','Evening'].filter(p=>!(isFirstDay&&p==='Morning'));
         return `
         <div class="day-section">
           <div class="day-heading">
