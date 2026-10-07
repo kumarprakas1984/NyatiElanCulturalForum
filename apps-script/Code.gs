@@ -1042,12 +1042,12 @@ function getPrasadData() {
  * slot on the very last day — the puja typically starts partway through day
  * one and wraps up before evening on the final day.
  */
-function isValidSevaSlot(dates, date, period) {
+function isValidSevaSlot(dates, date, period, allowLastDayEvening) {
   if (!dates || !dates.length) return false;
   const idx = dates.indexOf(date);
   if (idx === -1) return false;
   if (idx === 0 && period === 'Morning') return false;
-  if (idx === dates.length - 1 && period === 'Evening') return false;
+  if (!allowLastDayEvening && idx === dates.length - 1 && period === 'Evening') return false;
   return true;
 }
 
@@ -1142,7 +1142,7 @@ function saveSariRegistration(payload) {
 
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sariDates = getDateRangeList(ss, 'Sari Start Date', 'Sari End Date');
-  if (!isValidSevaSlot(sariDates, payload.date, payload.period)) {
+  if (!isValidSevaSlot(sariDates, payload.date, payload.period, true)) {
     throw new Error('That slot is not available for Sari seva.');
   }
 
