@@ -946,25 +946,28 @@ const SARI_UNLOCK_TIMESTAMP = new Date('2026-10-04T00:00:01+05:30');
  * item name, using getValues() rather than getDisplayValues() so a real
  * Sheets date cell comes back as a native Date object for arithmetic.
  */
-function getConfigValue(ss, itemName) {
+function getConfigValues(ss, itemNames) {
   ss = ss || SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const configSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.CONFIG);
-  if (!configSheet) return null;
+  const result = {};
+  if (!configSheet) return result;
 
   const values = configSheet.getDataRange().getValues();
-  if (values.length < 2) return null;
+  if (values.length < 2) return result;
 
   const headers = values[0].map(function(h) { return String(h).trim().toLowerCase(); });
   const colItem = headers.findIndex(function(h) { return h.indexOf('item') !== -1; });
   const colValue = headers.findIndex(function(h) { return h.indexOf('value') !== -1; });
-  if (colItem === -1 || colValue === -1) return null;
+  if (colItem === -1 || colValue === -1) return result;
 
-  const target = String(itemName).trim().toLowerCase();
+  const targets = itemNames.map(function(itemName) { return String(itemName).trim().toLowerCase(); });
   for (let i = 1; i < values.length; i++) {
     const item = String(values[i][colItem] || '').trim().toLowerCase();
-    if (item === target) return values[i][colValue];
+    if (targets.indexOf(item) !== -1 && !Object.prototype.hasOwnProperty.call(result, item)) {
+      result[item] = values[i][colValue];
+    }
   }
-  return null;
+  return result;
 }
 
 function toDateObject(value) {
@@ -985,8 +988,9 @@ function formatDateKey(date) {
  * values (e.g. "Prasad Start Date" / "Prasad End Date").
  */
 function getDateRangeList(ss, startItem, endItem) {
-  const start = toDateObject(getConfigValue(ss, startItem));
-  const end = toDateObject(getConfigValue(ss, endItem));
+  const config = getConfigValues(ss, [startItem, endItem]);
+  const start = toDateObject(config[String(startItem).trim().toLowerCase()]);
+  const end = toDateObject(config[String(endItem).trim().toLowerCase()]);
   if (!start || !end) return [];
 
   const dates = [];
