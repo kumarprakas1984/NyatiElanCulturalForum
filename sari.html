@@ -347,10 +347,11 @@
           <div class="period-grid">
             ${periods.map(period=>{
               const key=`${date}|${period}`;
-              const claimed=!!allClaimed[key];
+              const claimedBy=allClaimed[key];
+              const claimed=!!claimedBy;
               const clickable=!claimed&&unlocked;
               const stateClass=claimed?'claimed':(unlocked?'available':'locked');
-              const statusText=claimed?'Claimed':(unlocked?'Available':'Locked');
+              const statusText=claimed?`Claimed by ${escapeHtml(typeof claimedBy==='string'&&claimedBy.trim()?claimedBy:'a devotee')}`:(unlocked?'Available':'Locked');
               const spanStyle=periods.length===1?'style="grid-column:1 / -1"':'';
               return `
               <button type="button" class="period-tile ${stateClass}" ${spanStyle} ${clickable?`data-date="${date}" data-period="${period}"`:'disabled'}>

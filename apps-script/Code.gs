@@ -240,8 +240,8 @@ function doGet(e) {
     }
 
     // Sari seva: date range (from Config) + which (date, period) slots are
-    // already claimed (boolean only, no sponsor identity) + the unlock time,
-    // for UI purposes. The real enforcement happens in addSariRegistration.
+    // claimed and the sponsor names + the unlock time, for UI purposes. The
+    // real enforcement happens in addSariRegistration.
     if (action === 'getSariData') {
       const data = getSariData();
       return createJsonResponse({ status: 'success', data: data });
@@ -1101,9 +1101,9 @@ function savePrasadRegistration(payload) {
 }
 
 /**
- * Sari seva: returns the configured date range, which (date, period) slots
- * are already claimed (boolean only — no sponsor identity), and the unlock
- * timestamp for the UI to display a countdown/lock message.
+ * Sari seva: returns the configured date range, claimed (date, period) slots
+ * and sponsor names, and the unlock timestamp for the UI to display a
+ * countdown/lock message.
  */
 function getSariData() {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
@@ -1118,11 +1118,13 @@ function getSariData() {
       const headers = values[0].map(function(h) { return String(h).trim().toLowerCase(); });
       const colDate = headers.findIndex(function(h) { return h.indexOf('sari date') !== -1 || h.indexOf('date') !== -1; });
       const colPeriod = headers.findIndex(function(h) { return h.indexOf('period') !== -1; });
+      const colName = headers.findIndex(function(h) { return h.indexOf('name') !== -1; });
       for (let i = 1; i < values.length; i++) {
         const d = String(values[i][colDate] || '').trim();
         const p = String(values[i][colPeriod] || '').trim();
         if (!d || !p) continue;
-        claimed[d + '|' + p] = true;
+        const name = colName === -1 ? '' : String(values[i][colName] || '').trim();
+        claimed[d + '|' + p] = name || true;
       }
     }
   }
