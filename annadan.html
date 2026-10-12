@@ -62,6 +62,7 @@
     .modal .sub{color:#6B5D45;font-size:.85rem;margin:0 0 18px}
     .field{margin-bottom:14px}
     .field label{display:block;font-size:.82rem;font-weight:700;color:#4E4433;margin-bottom:5px}
+    .special-instruction{margin:0 0 14px;padding:10px 12px;border-left:3px solid #146F6C;border-radius:6px;background:#EAF5EF;color:#245B49;font-size:.85rem;line-height:1.5}
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
     .form-msg{font-size:.85rem;border-radius:10px;padding:10px 12px;margin-bottom:14px}
@@ -161,6 +162,7 @@
             <input id="f-flat" type="text" placeholder="e.g. 402" required>
           </div>
         </div>
+        <p id="f-special-instruction" class="special-instruction hidden" aria-live="polite"></p>
         <div class="field">
           <label id="f-qty-label" for="f-qty">Quantity (Kg) *</label>
           <input id="f-qty" type="number" min="0.1" step="0.1" placeholder="e.g. 5" required>
@@ -219,8 +221,8 @@
     function parseItemRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
       const headers=rows[0].map(normal);
-      const idx={item:headerIndex(headers,['item']),unit:headerIndex(headers,['unit']),required:headerIndex(headers,['required']),received:headerIndex(headers,['received']),stillNeeded:headerIndex(headers,['still needed','remaining'])};
-      return rows.slice(1).map(row=>({item:clean(row[idx.item]),unit:clean(row[idx.unit])||'Kg',required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
+      const idx={item:headerIndex(headers,['item']),unit:headerIndex(headers,['unit']),specialInstruction:headerIndex(headers,['special instruction']),required:headerIndex(headers,['required']),received:headerIndex(headers,['received']),stillNeeded:headerIndex(headers,['still needed','remaining'])};
+      return rows.slice(1).map(row=>({item:clean(row[idx.item]),unit:clean(row[idx.unit])||'Kg',specialInstruction:clean(row[idx.specialInstruction]),required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
     }
 
     function renderItemTiles(){
@@ -247,7 +249,13 @@
     function populateItemSelect(){
       $('f-item').innerHTML='<option value="">Select an item</option>'+
         items.map(it=>`<option value="${escapeHtml(it.item)}">${escapeHtml(it.item)}${it.stillNeeded>0?` (${fmtQty(it.stillNeeded,it.unit)} still needed)`:' (fully met)'}</option>`).join('');
-      $('f-item').onchange=updateQuantityLabel;
+      $('f-item').onchange=()=>{updateQuantityLabel();updateSpecialInstruction()};
+    }
+    function updateSpecialInstruction(){
+      const selected=items.find(it=>it.item===$('f-item').value);
+      const instruction=$('f-special-instruction');
+      instruction.textContent=selected?.specialInstruction||'';
+      instruction.classList.toggle('hidden',!selected?.specialInstruction);
     }
     function updateQuantityLabel(){
       const selected=items.find(it=>it.item===$('f-item').value);
@@ -259,11 +267,13 @@
       populateItemSelect();
       if(preselectItem) $('f-item').value=preselectItem;
       updateQuantityLabel();
+      updateSpecialInstruction();
     }
     function closePledgeModal(){
       $('pledge-modal-overlay').classList.add('hidden');
       $('pledge-form').reset();
       updateQuantityLabel();
+      updateSpecialInstruction();
     }
 
     async function submitPledge(evt){
