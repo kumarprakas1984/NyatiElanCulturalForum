@@ -162,7 +162,7 @@
           </div>
         </div>
         <div class="field">
-          <label for="f-qty">Quantity (KG) *</label>
+          <label id="f-qty-label" for="f-qty">Quantity (Kg) *</label>
           <input id="f-qty" type="number" min="0.1" step="0.1" placeholder="e.g. 5" required>
         </div>
         <div class="modal-actions">
@@ -202,26 +202,29 @@
     async function loadGsiScript(){
       if(!window.google?.accounts?.id) await loadScript('https://accounts.google.com/gsi/client');
     }
-    let items=[]; // requirement rows only: {item, required, received, stillNeeded} — no donor details, ever
+    let items=[]; // requirement rows only: {item, unit, required, received, stillNeeded} — no donor details, ever
     const $=id=>document.getElementById(id);
     const clean=value=>String(value??'').trim();
     function headerIndex(headers,tests){return headers.findIndex(h=>tests.some(test=>h.includes(test)))}
     function normal(value){return clean(value).toLowerCase()}
     function escapeHtml(value){return clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
     function num(value){const n=parseFloat(value);return isNaN(n)?0:n}
-    function fmtKg(n){return `${Number(n)%1===0?Number(n):Number(n).toFixed(1)} kg`}
+    function fmtQty(n,unit='Kg'){return `${Number(n)%1===0?Number(n):Number(n).toFixed(1)} ${unit||'Kg'}`}
+    function fmtUnitTotals(field){
+      const totals={};
+      items.forEach(item=>{totals[item.unit]=(totals[item.unit]||0)+item[field]});
+      return Object.entries(totals).map(([unit,total])=>fmtQty(total,unit)).join(' + ');
+    }
 
     function parseItemRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
       const headers=rows[0].map(normal);
-      const idx={item:headerIndex(headers,['item']),required:headerIndex(headers,['required']),received:headerIndex(headers,['received']),stillNeeded:headerIndex(headers,['still needed','remaining'])};
-      return rows.slice(1).map(row=>({item:clean(row[idx.item]),required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
+      const idx={item:headerIndex(headers,['item']),unit:headerIndex(headers,['unit']),required:headerIndex(headers,['required']),received:headerIndex(headers,['received']),stillNeeded:headerIndex(headers,['still needed','remaining'])};
+      return rows.slice(1).map(row=>({item:clean(row[idx.item]),unit:clean(row[idx.unit])||'Kg',required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
     }
 
     function renderItemTiles(){
-      const totalRequired=items.reduce((a,i)=>a+i.required,0);
-      const totalReceived=items.reduce((a,i)=>a+i.received,0);
-      $('overall-stat').textContent=items.length?`${fmtKg(totalReceived)} received of ${fmtKg(totalRequired)} needed, across ${items.length} item${items.length===1?'':'s'}`:'No Annadan requirements listed yet.';
+      $('overall-stat').textContent=items.length?`${fmtUnitTotals('received')} received of ${fmtUnitTotals('required')} needed, across ${items.length} item${items.length===1?'':'s'}`:'No Annadan requirements listed yet.';
 
       $('item-tiles').innerHTML=items.length?items.map(it=>{
         const met=it.stillNeeded<=0 && it.required>0;
@@ -229,10 +232,10 @@
         return `
         <button type="button" class="item-tile ${met?'met':'needed'}" data-item="${escapeHtml(it.item)}">
           <div class="it-name">${escapeHtml(it.item)}</div>
-          <div class="it-qty">${fmtKg(it.received)}</div>
-          <div class="it-label">of ${fmtKg(it.required)} needed</div>
+          <div class="it-qty">${fmtQty(it.received,it.unit)}</div>
+          <div class="it-label">of ${fmtQty(it.required,it.unit)} needed</div>
           <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-          ${met?'<span class="met-pill">Fully met ✓</span>':`<div class="it-label" style="margin-top:6px">${fmtKg(it.stillNeeded)} still needed</div>`}
+          ${met?'<span class="met-pill">Fully met ✓</span>':`<div class="it-label" style="margin-top:6px">${fmtQty(it.stillNeeded,it.unit)} still needed</div>`}
         </button>`;
       }).join(''):'<div class="state" style="grid-column:1/-1">No items listed yet. Ask an admin to add rows to the Annadan sheet.</div>';
 
@@ -243,17 +246,24 @@
 
     function populateItemSelect(){
       $('f-item').innerHTML='<option value="">Select an item</option>'+
-        items.map(it=>`<option value="${escapeHtml(it.item)}">${escapeHtml(it.item)}${it.stillNeeded>0?` (${fmtKg(it.stillNeeded)} still needed)`:' (fully met)'}</option>`).join('');
+        items.map(it=>`<option value="${escapeHtml(it.item)}">${escapeHtml(it.item)}${it.stillNeeded>0?` (${fmtQty(it.stillNeeded,it.unit)} still needed)`:' (fully met)'}</option>`).join('');
+      $('f-item').onchange=updateQuantityLabel;
+    }
+    function updateQuantityLabel(){
+      const selected=items.find(it=>it.item===$('f-item').value);
+      $('f-qty-label').textContent=`Quantity (${selected?.unit||'Kg'}) *`;
     }
     function openPledgeModal(preselectItem){
       $('pledge-modal-overlay').classList.remove('hidden');
       $('form-msg').classList.add('hidden');
       populateItemSelect();
       if(preselectItem) $('f-item').value=preselectItem;
+      updateQuantityLabel();
     }
     function closePledgeModal(){
       $('pledge-modal-overlay').classList.add('hidden');
       $('pledge-form').reset();
+      updateQuantityLabel();
     }
 
     async function submitPledge(evt){
