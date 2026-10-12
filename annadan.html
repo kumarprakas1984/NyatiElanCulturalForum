@@ -64,7 +64,8 @@
     .field label{display:block;font-size:.82rem;font-weight:700;color:#4E4433;margin-bottom:5px}
     .volunteer-options{margin:0 0 14px;padding:12px;border:1px solid #D0C4AE;border-radius:10px}
     .volunteer-options legend{padding:0 5px;font-size:.82rem;font-weight:700;color:#4E4433}
-    .volunteer-option{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.9rem}
+    #milk-volunteer-radios{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .volunteer-option{display:flex;align-items:center;gap:8px;margin-top:0;font-size:.9rem}
     .volunteer-option input{margin:0;accent-color:#146F6C}
     .special-instruction{margin:0 0 14px;padding:10px 12px;border-left:3px solid #146F6C;border-radius:6px;background:#EAF5EF;color:#245B49;font-size:.85rem;line-height:1.5}
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -294,7 +295,7 @@
       });
     }
     function renderAnnadanMessage(){
-      const pageMessage=items.map(item=>item.message).find(Boolean)||'';
+      const pageMessage=items.map(item=>clean(item.message).replace(/^message\s*:?\s*/i,'')).find(Boolean)||'';
       const contacts=getMilkVolunteers().map(volunteer=>`${volunteer.name}${volunteer.mobile?`: ${volunteer.mobile}`:''}`).join(' | ');
       const lines=[pageMessage,contacts?`Milk payment volunteers: ${contacts}`:''].filter(Boolean);
       const element=$('annadan-message');
