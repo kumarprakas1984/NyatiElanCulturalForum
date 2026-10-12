@@ -62,6 +62,12 @@
     .modal .sub{color:#6B5D45;font-size:.85rem;margin:0 0 18px}
     .field{margin-bottom:14px}
     .field label{display:block;font-size:.82rem;font-weight:700;color:#4E4433;margin-bottom:5px}
+    .volunteer-options{display:block;width:100%;min-width:0;margin:0 0 14px;padding:12px;border:1px solid #D0C4AE;border-radius:10px}
+    .volunteer-options legend{padding:0 5px;font-size:.82rem;font-weight:700;color:#4E4433}
+    #milk-volunteer-radios{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;column-gap:12px}
+    .volunteer-option{display:flex;align-items:center;gap:8px;min-width:0;margin-top:0;font-size:.9rem;white-space:nowrap}
+    .volunteer-option input{margin:0;accent-color:#146F6C}
+    .special-instruction{margin:0 0 14px;padding:10px 12px;border-left:3px solid #146F6C;border-radius:6px;background:#EAF5EF;color:#245B49;font-size:.85rem;line-height:1.5}
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
     .form-msg{font-size:.85rem;border-radius:10px;padding:10px 12px;margin-bottom:14px}
@@ -69,6 +75,7 @@
     .form-msg.ok{background:#EAF5EF;color:#256648;border:1px solid #C7E5D3}
 
     @media(max-width:760px){.topbar{padding-bottom:10px}.row2{grid-template-columns:1fr}}
+    @media(max-width:420px){#milk-volunteer-radios{grid-template-columns:1fr}}
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -97,12 +104,16 @@
 
   <main class="wrap">
     <section class="intro"><div class="eyebrow">Community seva</div><h1>Annadan</h1><p>See what's still needed for the community feast — tap an item to pledge it, or bring your own.</p></section>
+    <p id="annadan-message" class="note hidden" aria-live="polite"></p>
+    <p id="annadan-volunteers" class="note hidden" aria-live="polite"></p>
     <section class="panel" aria-live="polite">
       <div class="toolbar">
         <span class="stat-line" id="overall-stat">Loading requirements…</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" class="btn btn-outline" onclick="downloadItemsExcel()"><span>⬇</span> Summary (Excel)</button>
-          <button type="button" class="btn btn-outline" onclick="downloadItemsPdf()"><span>⬇</span> Summary (PDF)</button>
+          <div id="admin-summary-downloads" class="hidden" style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-outline" onclick="downloadItemsExcel()"><span>⬇</span> Summary (Excel)</button>
+            <button type="button" class="btn btn-outline" onclick="downloadItemsPdf()"><span>⬇</span> Summary (PDF)</button>
+          </div>
           <button type="button" class="btn btn-primary" onclick="openPledgeModal()"><span>＋</span> Pledge Donation</button>
         </div>
       </div>
@@ -161,6 +172,11 @@
             <input id="f-flat" type="text" placeholder="e.g. 402" required>
           </div>
         </div>
+        <p id="f-special-instruction" class="special-instruction hidden" aria-live="polite"></p>
+        <fieldset id="milk-volunteer-options" class="volunteer-options hidden">
+          <legend>Choose whom you paid or will pay your contribution to *</legend>
+          <div id="milk-volunteer-radios"></div>
+        </fieldset>
         <div class="field">
           <label id="f-qty-label" for="f-qty">Quantity (Kg) *</label>
           <input id="f-qty" type="number" min="0.1" step="0.1" placeholder="e.g. 5" required>
@@ -175,7 +191,7 @@
 
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
-    const CACHE_KEY='nyati-annadan-v2', CACHE_TTL=60000;
+    const CACHE_KEY='nyati-annadan-v4', CACHE_TTL=60000;
     const ADMIN_CLIENT_ID='939061030612-0buu96811vujgankod2cmcjf2t8bc9ih.apps.googleusercontent.com';
     let adminEmail=null;          // set only after the backend confirms this email is a registered admin
     let annadanDetailRows=[];     // donor-level pledge rows — only ever populated post sign-in, never public
@@ -219,8 +235,23 @@
     function parseItemRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
       const headers=rows[0].map(normal);
-      const idx={item:headerIndex(headers,['item']),unit:headerIndex(headers,['unit']),required:headerIndex(headers,['required']),received:headerIndex(headers,['received']),stillNeeded:headerIndex(headers,['still needed','remaining'])};
-      return rows.slice(1).map(row=>({item:clean(row[idx.item]),unit:clean(row[idx.unit])||'Kg',required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
+      const idx={item:headerIndex(headers,['item']),unit:headerIndex(headers,['unit']),specialInstruction:headerIndex(headers,['special instruction']),volunteerName:headerIndex(headers,['volunteer name']),volunteerMobile:headerIndex(headers,['volunteer mobile','mobile number','phone number']),message:headerIndex(headers,['message']),required:headerIndex(headers,['required']),received:headerIndex(headers,['received']),stillNeeded:headerIndex(headers,['still needed','remaining'])};
+      if(idx.volunteerName===-1) idx.volunteerName=10;
+      if(idx.volunteerMobile===-1) idx.volunteerMobile=11;
+      if(idx.message===-1) idx.message=14;
+      const contactParts=value=>clean(value).split(/[\n;,|]+/).map(clean).filter(Boolean);
+      const dataRows=rows.slice(1);
+      const volunteers=[];
+      dataRows.forEach(row=>{
+        const names=contactParts(row[idx.volunteerName]);
+        const mobiles=contactParts(row[idx.volunteerMobile]);
+        names.forEach((name,index)=>{
+          const volunteer={name,mobile:mobiles[index]||''};
+          if(!volunteers.some(existing=>existing.name===volunteer.name&&existing.mobile===volunteer.mobile)) volunteers.push(volunteer);
+        });
+      });
+      const sharedMessage=dataRows.map(row=>clean(row[idx.message]).replace(/^message\s*:?\s*/i,'')).find(Boolean)||'';
+      return dataRows.map(row=>({item:clean(row[idx.item]),unit:clean(row[idx.unit])||'Kg',specialInstruction:clean(row[idx.specialInstruction]),message:sharedMessage,volunteers,required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
     }
 
     function renderItemTiles(){
@@ -247,11 +278,45 @@
     function populateItemSelect(){
       $('f-item').innerHTML='<option value="">Select an item</option>'+
         items.map(it=>`<option value="${escapeHtml(it.item)}">${escapeHtml(it.item)}${it.stillNeeded>0?` (${fmtQty(it.stillNeeded,it.unit)} still needed)`:' (fully met)'}</option>`).join('');
-      $('f-item').onchange=updateQuantityLabel;
+      $('f-item').onchange=()=>{updateQuantityLabel();updateSpecialInstruction();updateMilkVolunteerOptions()};
+    }
+    function updateSpecialInstruction(){
+      const selected=items.find(it=>it.item===$('f-item').value);
+      const instruction=$('f-special-instruction');
+      instruction.textContent=selected?.specialInstruction||'';
+      instruction.classList.toggle('hidden',!instruction.textContent);
+    }
+    function getMilkVolunteers(){
+      const seen=new Set();
+      return items.filter(item=>item.item.toLowerCase()==='milk').flatMap(item=>item.volunteers||[]).filter(volunteer=>{
+        if(!volunteer.name||/^(volunteer|volunteer name|name)$/i.test(volunteer.name)||/^(mobile|mobile number|phone|phone number)$/i.test(volunteer.mobile)) return false;
+        const key=`${volunteer.name}|${volunteer.mobile}`;
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    function renderAnnadanMessage(){
+      const pageMessage=items.map(item=>clean(item.message).replace(/^message\s*:?\s*/i,'')).find(Boolean)||'';
+      const element=$('annadan-message');
+      element.textContent=pageMessage;
+      element.classList.toggle('hidden',!element.textContent);
+      const volunteers=getMilkVolunteers().map(volunteer=>`${volunteer.name}${volunteer.mobile?`: ${volunteer.mobile}`:''}`).join(' | ');
+      const volunteerElement=$('annadan-volunteers');
+      volunteerElement.textContent=volunteers;
+      volunteerElement.classList.toggle('hidden',!volunteerElement.textContent);
     }
     function updateQuantityLabel(){
       const selected=items.find(it=>it.item===$('f-item').value);
       $('f-qty-label').textContent=`Quantity (${selected?.unit||'Kg'}) *`;
+    }
+    function updateMilkVolunteerOptions(){
+      const isMilk=clean($('f-item').value).toLowerCase()==='milk';
+      const radioContainer=$('milk-volunteer-radios');
+      const volunteers=getMilkVolunteers();
+      $('milk-volunteer-options').classList.toggle('hidden',!isMilk);
+      radioContainer.innerHTML=isMilk?volunteers.map(volunteer=>`<label class="volunteer-option"><input type="radio" name="milk-paid-to" value="${escapeHtml(volunteer.name)}" required> ${escapeHtml(volunteer.name)}${volunteer.mobile?`: ${escapeHtml(volunteer.mobile)}`:''}</label>`).join(''):'';
+      if(isMilk&&!volunteers.length) radioContainer.textContent='Volunteer contacts are not configured for Milk.';
     }
     function openPledgeModal(preselectItem){
       $('pledge-modal-overlay').classList.remove('hidden');
@@ -259,16 +324,21 @@
       populateItemSelect();
       if(preselectItem) $('f-item').value=preselectItem;
       updateQuantityLabel();
+      updateSpecialInstruction();
+      updateMilkVolunteerOptions();
     }
     function closePledgeModal(){
       $('pledge-modal-overlay').classList.add('hidden');
       $('pledge-form').reset();
       updateQuantityLabel();
+      updateSpecialInstruction();
+      updateMilkVolunteerOptions();
     }
 
     async function submitPledge(evt){
       evt.preventDefault();
       const name=clean($('f-name').value), mobile=clean($('f-mobile').value), building=clean($('f-building').value), flat=clean($('f-flat').value), item=clean($('f-item').value), quantity=parseFloat($('f-qty').value);
+      const paidTo=$('pledge-form').querySelector('input[name="milk-paid-to"]:checked')?.value||'';
       const msg=$('form-msg');
       if(!name||!building||!flat||!item||!quantity||quantity<=0){
         msg.className='form-msg err';msg.textContent='Please fill Name, Building, Flat, Item and a valid Quantity.';msg.classList.remove('hidden');
@@ -280,7 +350,7 @@
         const response=await fetch(API_URL,{
           method:'POST',
           headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({action:'addAnnadanResponse',payload:{ name, mobile, building, flat, item, quantity }})
+          body:JSON.stringify({action:'addAnnadanResponse',payload:{ name, mobile, building, flat, item, quantity, paidTo }})
         });
         const result=await response.json();
         if(result.status!=='success') throw new Error(result.message||'Could not save pledge.');
@@ -379,6 +449,7 @@
       $('admin-signin-link').classList.add('hidden');
       $('admin-status').innerHTML=`Admin: ${escapeHtml(name||email)} &nbsp;·&nbsp; <button type="button" onclick="signOutAdmin()" style="background:none;border:none;color:inherit;text-decoration:underline;cursor:pointer;font:inherit">Sign out</button>`;
       $('admin-status').classList.remove('hidden');
+      $('admin-summary-downloads').classList.remove('hidden');
       $('admin-download-row').classList.remove('hidden');
     }
     function signOutAdmin(){
@@ -387,6 +458,7 @@
       clearAdminSession();
       $('admin-signin-link').classList.remove('hidden');
       $('admin-status').classList.add('hidden');
+      $('admin-summary-downloads').classList.add('hidden');
       $('admin-download-row').classList.add('hidden');
     }
     async function verifyAdminEmail(email){
@@ -420,8 +492,8 @@
     function parsePledgeRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
       const headers=rows[0].map(normal);
-      const idx={date:headerIndex(headers,['response time','timestamp','time']),name:headerIndex(headers,['name']),mobile:headerIndex(headers,['mobile','phone','contact']),building:headerIndex(headers,['building']),flat:headerIndex(headers,['flat']),item:headerIndex(headers,['item']),qty:headerIndex(headers,['quantity','qty'])};
-      return rows.slice(1).map(row=>({date:clean(row[idx.date]),name:clean(row[idx.name]),mobile:clean(row[idx.mobile]),building:clean(row[idx.building]),flat:clean(row[idx.flat]),item:clean(row[idx.item]),quantity:num(row[idx.qty])})).filter(p=>p.name||p.item);
+      const idx={date:headerIndex(headers,['response time','timestamp','time']),name:headerIndex(headers,['name']),mobile:headerIndex(headers,['mobile','phone','contact']),building:headerIndex(headers,['building']),flat:headerIndex(headers,['flat']),item:headerIndex(headers,['item']),qty:headerIndex(headers,['quantity','qty']),paidTo:headerIndex(headers,['paid to'])};
+      return rows.slice(1).map(row=>({date:clean(row[idx.date]),name:clean(row[idx.name]),mobile:clean(row[idx.mobile]),building:clean(row[idx.building]),flat:clean(row[idx.flat]),item:clean(row[idx.item]),quantity:num(row[idx.qty]),paidTo:clean(row[idx.paidTo])})).filter(p=>p.name||p.item);
     }
 
     // ---- Admin-only donor-level detail export ----
@@ -432,7 +504,8 @@
       {key:'building',header:'Building'},
       {key:'flat',header:'Flat'},
       {key:'item',header:'Item'},
-      {key:'quantity',header:'Quantity (KG)'}
+      {key:'quantity',header:'Quantity (KG)'},
+      {key:'paidTo',header:'Paid To'}
     ];
     async function downloadDetailExcel(){
       if(!annadanDetailRows.length){alert('No pledges recorded yet.');return}
@@ -466,12 +539,13 @@
       try{
         if(!opts.force){
           const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
-          if(cached&&Date.now()-cached.time<CACHE_TTL){items=cached.items;renderItemTiles();return}
+          if(cached&&Date.now()-cached.time<CACHE_TTL){items=cached.items;renderAnnadanMessage();renderItemTiles();return}
         }
         const response=await fetch(`${API_URL}?action=getAnnadanData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
         const payload=await response.json();
         items=parseItemRows(payload?.data?.annadanItems||[]);
         localStorage.setItem(CACHE_KEY,JSON.stringify({time:Date.now(),items}));
+        renderAnnadanMessage();
         renderItemTiles();
       }catch(error){$('item-tiles').innerHTML='<div class="error" style="grid-column:1/-1">Annadan data could not be loaded. Please try again in a moment.</div>';$('overall-stat').textContent='Could not connect';console.error(error)}
     }
