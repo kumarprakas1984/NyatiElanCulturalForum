@@ -303,7 +303,7 @@
       element.classList.toggle('hidden',!element.textContent);
       const volunteers=getMilkVolunteers().map(volunteer=>`${volunteer.name}${volunteer.mobile?`: ${volunteer.mobile}`:''}`).join(' | ');
       const volunteerElement=$('annadan-volunteers');
-      volunteerElement.textContent=volunteers?`Milk payment contacts: ${volunteers}`:'';
+      volunteerElement.textContent=volunteers;
       volunteerElement.classList.toggle('hidden',!volunteerElement.textContent);
     }
     function updateQuantityLabel(){
