@@ -755,6 +755,10 @@ function saveAnnadanResponse(payload) {
   if (!payload || !payload.name || !payload.building || !payload.flat || !payload.item || !payload.quantity) {
     throw new Error('Name, Building, Flat, Item and Quantity are required.');
   }
+  const paidTo = String(payload.paidTo || '').trim();
+  if (String(payload.item).trim().toLowerCase() === 'milk' && ['Medha P Kumar', 'Surabhi'].indexOf(paidTo) === -1) {
+    throw new Error('Choose who received or will receive the payment.');
+  }
 
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = getOrCreateAnnadanResponseSheet(ss);
@@ -775,6 +779,12 @@ function saveAnnadanResponse(payload) {
   const colFlat = findCol(['flat']);
   const colItem = findCol(['item']);
   const colQty = findCol(['quantity', 'qty']);
+  let colPaidTo = findCol(['paid to']);
+  if (colPaidTo === -1) {
+    colPaidTo = headers.length;
+    sheet.getRange(1, colPaidTo + 1).setValue('Paid To');
+    headers.push('paid to');
+  }
 
   const numCols = Math.max(headers.length, sheet.getLastColumn());
   const row = new Array(numCols).fill('');
@@ -787,6 +797,7 @@ function saveAnnadanResponse(payload) {
   if (colFlat !== -1) row[colFlat] = payload.flat;
   if (colItem !== -1) row[colItem] = payload.item;
   if (colQty !== -1) row[colQty] = Number(payload.quantity) || 0;
+  if (colPaidTo !== -1) row[colPaidTo] = String(payload.item).trim().toLowerCase() === 'milk' ? paidTo : '';
 
   sheet.appendRow(row);
 
