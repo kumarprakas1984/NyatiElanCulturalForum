@@ -105,6 +105,7 @@
   <main class="wrap">
     <section class="intro"><div class="eyebrow">Community seva</div><h1>Annadan</h1><p>See what's still needed for the community feast — tap an item to pledge it, or bring your own.</p></section>
     <p id="annadan-message" class="note hidden" aria-live="polite"></p>
+    <p id="annadan-volunteers" class="note hidden" aria-live="polite"></p>
     <section class="panel" aria-live="polite">
       <div class="toolbar">
         <span class="stat-line" id="overall-stat">Loading requirements…</span>
@@ -171,11 +172,11 @@
             <input id="f-flat" type="text" placeholder="e.g. 402" required>
           </div>
         </div>
+        <p id="f-special-instruction" class="special-instruction hidden" aria-live="polite"></p>
         <fieldset id="milk-volunteer-options" class="volunteer-options hidden">
           <legend>Choose whom you paid or will pay your contribution to *</legend>
           <div id="milk-volunteer-radios"></div>
         </fieldset>
-        <p id="f-special-instruction" class="special-instruction hidden" aria-live="polite"></p>
         <div class="field">
           <label id="f-qty-label" for="f-qty">Quantity (Kg) *</label>
           <input id="f-qty" type="number" min="0.1" step="0.1" placeholder="e.g. 5" required>
@@ -190,7 +191,7 @@
 
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
-    const CACHE_KEY='nyati-annadan-v3', CACHE_TTL=60000;
+    const CACHE_KEY='nyati-annadan-v4', CACHE_TTL=60000;
     const ADMIN_CLIENT_ID='939061030612-0buu96811vujgankod2cmcjf2t8bc9ih.apps.googleusercontent.com';
     let adminEmail=null;          // set only after the backend confirms this email is a registered admin
     let annadanDetailRows=[];     // donor-level pledge rows — only ever populated post sign-in, never public
@@ -249,7 +250,7 @@
           if(!volunteers.some(existing=>existing.name===volunteer.name&&existing.mobile===volunteer.mobile)) volunteers.push(volunteer);
         });
       });
-      const sharedMessage=dataRows.map(row=>clean(row[idx.message])).find(Boolean)||'';
+      const sharedMessage=dataRows.map(row=>clean(row[idx.message]).replace(/^message\s*:?\s*/i,'')).find(Boolean)||'';
       return dataRows.map(row=>({item:clean(row[idx.item]),unit:clean(row[idx.unit])||'Kg',specialInstruction:clean(row[idx.specialInstruction]),message:sharedMessage,volunteers,required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
     }
 
@@ -300,6 +301,10 @@
       const element=$('annadan-message');
       element.textContent=pageMessage;
       element.classList.toggle('hidden',!element.textContent);
+      const volunteers=getMilkVolunteers().map(volunteer=>`${volunteer.name}${volunteer.mobile?`: ${volunteer.mobile}`:''}`).join(' | ');
+      const volunteerElement=$('annadan-volunteers');
+      volunteerElement.textContent=volunteers?`Milk payment contacts: ${volunteers}`:'';
+      volunteerElement.classList.toggle('hidden',!volunteerElement.textContent);
     }
     function updateQuantityLabel(){
       const selected=items.find(it=>it.item===$('f-item').value);
