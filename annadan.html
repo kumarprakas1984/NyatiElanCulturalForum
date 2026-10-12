@@ -102,6 +102,7 @@
 
   <main class="wrap">
     <section class="intro"><div class="eyebrow">Community seva</div><h1>Annadan</h1><p>See what's still needed for the community feast — tap an item to pledge it, or bring your own.</p></section>
+    <p id="annadan-message" class="note hidden" aria-live="polite"></p>
     <section class="panel" aria-live="polite">
       <div class="toolbar">
         <span class="stat-line" id="overall-stat">Loading requirements…</span>
@@ -170,8 +171,7 @@
         </div>
         <fieldset id="milk-volunteer-options" class="volunteer-options hidden">
           <legend>Choose who received or will receive the payment *</legend>
-          <label class="volunteer-option"><input type="radio" name="milk-paid-to" value="Medha P Kumar" required> Medha P Kumar: 9595132150</label>
-          <label class="volunteer-option"><input type="radio" name="milk-paid-to" value="Surabhi" required> Surabhi: 8600041293</label>
+          <div id="milk-volunteer-radios"></div>
         </fieldset>
         <p id="f-special-instruction" class="special-instruction hidden" aria-live="polite"></p>
         <div class="field">
@@ -188,7 +188,7 @@
 
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
-    const CACHE_KEY='nyati-annadan-v2', CACHE_TTL=60000;
+    const CACHE_KEY='nyati-annadan-v3', CACHE_TTL=60000;
     const ADMIN_CLIENT_ID='939061030612-0buu96811vujgankod2cmcjf2t8bc9ih.apps.googleusercontent.com';
     let adminEmail=null;          // set only after the backend confirms this email is a registered admin
     let annadanDetailRows=[];     // donor-level pledge rows — only ever populated post sign-in, never public
@@ -232,8 +232,23 @@
     function parseItemRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
       const headers=rows[0].map(normal);
-      const idx={item:headerIndex(headers,['item']),unit:headerIndex(headers,['unit']),specialInstruction:headerIndex(headers,['special instruction']),required:headerIndex(headers,['required']),received:headerIndex(headers,['received']),stillNeeded:headerIndex(headers,['still needed','remaining'])};
-      return rows.slice(1).map(row=>({item:clean(row[idx.item]),unit:clean(row[idx.unit])||'Kg',specialInstruction:clean(row[idx.specialInstruction]),required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
+      const idx={item:headerIndex(headers,['item']),unit:headerIndex(headers,['unit']),specialInstruction:headerIndex(headers,['special instruction']),volunteerName:headerIndex(headers,['volunteer name']),volunteerMobile:headerIndex(headers,['volunteer mobile','mobile number','phone number']),message:headerIndex(headers,['message']),required:headerIndex(headers,['required']),received:headerIndex(headers,['received']),stillNeeded:headerIndex(headers,['still needed','remaining'])};
+      if(idx.volunteerName===-1) idx.volunteerName=10;
+      if(idx.volunteerMobile===-1) idx.volunteerMobile=11;
+      if(idx.message===-1) idx.message=14;
+      const contactParts=value=>clean(value).split(/[\n;,|]+/).map(clean).filter(Boolean);
+      const dataRows=rows.slice(1);
+      const volunteers=[];
+      dataRows.forEach(row=>{
+        const names=contactParts(row[idx.volunteerName]);
+        const mobiles=contactParts(row[idx.volunteerMobile]);
+        names.forEach((name,index)=>{
+          const volunteer={name,mobile:mobiles[index]||''};
+          if(!volunteers.some(existing=>existing.name===volunteer.name&&existing.mobile===volunteer.mobile)) volunteers.push(volunteer);
+        });
+      });
+      const sharedMessage=dataRows.map(row=>clean(row[idx.message])).find(Boolean)||'';
+      return dataRows.map(row=>({item:clean(row[idx.item]),unit:clean(row[idx.unit])||'Kg',specialInstruction:clean(row[idx.specialInstruction]),message:sharedMessage,volunteers,required:num(row[idx.required]),received:num(row[idx.received]),stillNeeded:num(row[idx.stillNeeded])})).filter(r=>r.item);
     }
 
     function renderItemTiles(){
@@ -266,7 +281,25 @@
       const selected=items.find(it=>it.item===$('f-item').value);
       const instruction=$('f-special-instruction');
       instruction.textContent=selected?.specialInstruction||'';
-      instruction.classList.toggle('hidden',!selected?.specialInstruction);
+      instruction.classList.toggle('hidden',!instruction.textContent);
+    }
+    function getMilkVolunteers(){
+      const seen=new Set();
+      return items.filter(item=>item.item.toLowerCase()==='milk').flatMap(item=>item.volunteers||[]).filter(volunteer=>{
+        if(!volunteer.name) return false;
+        const key=`${volunteer.name}|${volunteer.mobile}`;
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    function renderAnnadanMessage(){
+      const pageMessage=items.map(item=>item.message).find(Boolean)||'';
+      const contacts=getMilkVolunteers().map(volunteer=>`${volunteer.name}${volunteer.mobile?`: ${volunteer.mobile}`:''}`).join(' | ');
+      const lines=[pageMessage,contacts?`Milk payment volunteers: ${contacts}`:''].filter(Boolean);
+      const element=$('annadan-message');
+      element.textContent=lines.join(' ');
+      element.classList.toggle('hidden',!element.textContent);
     }
     function updateQuantityLabel(){
       const selected=items.find(it=>it.item===$('f-item').value);
@@ -274,12 +307,11 @@
     }
     function updateMilkVolunteerOptions(){
       const isMilk=clean($('f-item').value).toLowerCase()==='milk';
-      const options=$('milk-volunteer-options');
-      options.classList.toggle('hidden',!isMilk);
-      options.querySelectorAll('input[type="radio"]').forEach(input=>{
-        input.required=isMilk;
-        if(!isMilk) input.checked=false;
-      });
+      const radioContainer=$('milk-volunteer-radios');
+      const volunteers=getMilkVolunteers();
+      $('milk-volunteer-options').classList.toggle('hidden',!isMilk);
+      radioContainer.innerHTML=isMilk?volunteers.map(volunteer=>`<label class="volunteer-option"><input type="radio" name="milk-paid-to" value="${escapeHtml(volunteer.name)}" required> ${escapeHtml(volunteer.name)}${volunteer.mobile?`: ${escapeHtml(volunteer.mobile)}`:''}</label>`).join(''):'';
+      if(isMilk&&!volunteers.length) radioContainer.textContent='Volunteer contacts are not configured for Milk.';
     }
     function openPledgeModal(preselectItem){
       $('pledge-modal-overlay').classList.remove('hidden');

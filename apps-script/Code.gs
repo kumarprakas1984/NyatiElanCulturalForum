@@ -747,6 +747,32 @@ function getOrCreateAnnadanResponseSheet(ss) {
   ]);
 }
 
+function getAnnadanMilkVolunteers(ss) {
+  const annadanSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.ANNADAN);
+  if (!annadanSheet) return [];
+  const values = annadanSheet.getDataRange().getDisplayValues();
+  if (values.length < 2) return [];
+
+  const headers = values[0].map(function(h) { return String(h).trim().toLowerCase(); });
+  let colName = headers.findIndex(function(h) { return h.indexOf('volunteer') !== -1 && h.indexOf('name') !== -1; });
+  let colMobile = headers.findIndex(function(h) { return h.indexOf('mobile') !== -1 || h.indexOf('phone') !== -1; });
+  if (colName === -1) colName = 10;
+  if (colMobile === -1) colMobile = 11;
+
+  const volunteers = [];
+  for (let i = 1; i < values.length; i++) {
+    const names = String(values[i][colName] || '').split(/[\r\n;,|]+/).map(function(value) { return value.trim(); }).filter(Boolean);
+    const mobiles = String(values[i][colMobile] || '').split(/[\r\n;,|]+/).map(function(value) { return value.trim(); });
+    names.forEach(function(name, index) {
+      const mobile = mobiles[index] || '';
+      if (!volunteers.some(function(volunteer) { return volunteer.name === name && volunteer.mobile === mobile; })) {
+        volunteers.push({ name: name, mobile: mobile });
+      }
+    });
+  }
+  return volunteers;
+}
+
 /**
  * Saves a new Annadan donation pledge, then recalculates the
  * Quantity Received / Quantity Still Needed columns on the Annadan sheet.
@@ -755,12 +781,11 @@ function saveAnnadanResponse(payload) {
   if (!payload || !payload.name || !payload.building || !payload.flat || !payload.item || !payload.quantity) {
     throw new Error('Name, Building, Flat, Item and Quantity are required.');
   }
-  const paidTo = String(payload.paidTo || '').trim();
-  if (String(payload.item).trim().toLowerCase() === 'milk' && ['Medha P Kumar', 'Surabhi'].indexOf(paidTo) === -1) {
-    throw new Error('Choose who received or will receive the payment.');
-  }
-
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const paidTo = String(payload.paidTo || '').trim();
+  if (String(payload.item).trim().toLowerCase() === 'milk' && !getAnnadanMilkVolunteers(ss).some(function(volunteer) { return volunteer.name === paidTo; })) {
+    throw new Error('Choose a volunteer listed for Milk in the Annadan sheet.');
+  }
   const sheet = getOrCreateAnnadanResponseSheet(ss);
 
   const lastCol = Math.max(sheet.getLastColumn(), 1);
