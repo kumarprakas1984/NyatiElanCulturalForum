@@ -62,6 +62,10 @@
     .modal .sub{color:#6B5D45;font-size:.85rem;margin:0 0 18px}
     .field{margin-bottom:14px}
     .field label{display:block;font-size:.82rem;font-weight:700;color:#4E4433;margin-bottom:5px}
+    .volunteer-options{margin:0 0 14px;padding:12px;border:1px solid #D0C4AE;border-radius:10px}
+    .volunteer-options legend{padding:0 5px;font-size:.82rem;font-weight:700;color:#4E4433}
+    .volunteer-option{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.9rem}
+    .volunteer-option input{margin:0;accent-color:#146F6C}
     .special-instruction{margin:0 0 14px;padding:10px 12px;border-left:3px solid #146F6C;border-radius:6px;background:#EAF5EF;color:#245B49;font-size:.85rem;line-height:1.5}
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
@@ -102,8 +106,10 @@
       <div class="toolbar">
         <span class="stat-line" id="overall-stat">Loading requirements…</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" class="btn btn-outline" onclick="downloadItemsExcel()"><span>⬇</span> Summary (Excel)</button>
-          <button type="button" class="btn btn-outline" onclick="downloadItemsPdf()"><span>⬇</span> Summary (PDF)</button>
+          <div id="admin-summary-downloads" class="hidden" style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-outline" onclick="downloadItemsExcel()"><span>⬇</span> Summary (Excel)</button>
+            <button type="button" class="btn btn-outline" onclick="downloadItemsPdf()"><span>⬇</span> Summary (PDF)</button>
+          </div>
           <button type="button" class="btn btn-primary" onclick="openPledgeModal()"><span>＋</span> Pledge Donation</button>
         </div>
       </div>
@@ -162,6 +168,11 @@
             <input id="f-flat" type="text" placeholder="e.g. 402" required>
           </div>
         </div>
+        <fieldset id="milk-volunteer-options" class="volunteer-options hidden">
+          <legend>Paid or paying to *</legend>
+          <label class="volunteer-option"><input type="radio" name="milk-paid-to" value="Medha P Kumar" required> Medha P Kumar: 9595132150</label>
+          <label class="volunteer-option"><input type="radio" name="milk-paid-to" value="Surabhi" required> Surabhi: 8600041293</label>
+        </fieldset>
         <p id="f-special-instruction" class="special-instruction hidden" aria-live="polite"></p>
         <div class="field">
           <label id="f-qty-label" for="f-qty">Quantity (Kg) *</label>
@@ -249,7 +260,7 @@
     function populateItemSelect(){
       $('f-item').innerHTML='<option value="">Select an item</option>'+
         items.map(it=>`<option value="${escapeHtml(it.item)}">${escapeHtml(it.item)}${it.stillNeeded>0?` (${fmtQty(it.stillNeeded,it.unit)} still needed)`:' (fully met)'}</option>`).join('');
-      $('f-item').onchange=()=>{updateQuantityLabel();updateSpecialInstruction()};
+      $('f-item').onchange=()=>{updateQuantityLabel();updateSpecialInstruction();updateMilkVolunteerOptions()};
     }
     function updateSpecialInstruction(){
       const selected=items.find(it=>it.item===$('f-item').value);
@@ -261,6 +272,15 @@
       const selected=items.find(it=>it.item===$('f-item').value);
       $('f-qty-label').textContent=`Quantity (${selected?.unit||'Kg'}) *`;
     }
+    function updateMilkVolunteerOptions(){
+      const isMilk=clean($('f-item').value).toLowerCase()==='milk';
+      const options=$('milk-volunteer-options');
+      options.classList.toggle('hidden',!isMilk);
+      options.querySelectorAll('input[type="radio"]').forEach(input=>{
+        input.required=isMilk;
+        if(!isMilk) input.checked=false;
+      });
+    }
     function openPledgeModal(preselectItem){
       $('pledge-modal-overlay').classList.remove('hidden');
       $('form-msg').classList.add('hidden');
@@ -268,17 +288,20 @@
       if(preselectItem) $('f-item').value=preselectItem;
       updateQuantityLabel();
       updateSpecialInstruction();
+      updateMilkVolunteerOptions();
     }
     function closePledgeModal(){
       $('pledge-modal-overlay').classList.add('hidden');
       $('pledge-form').reset();
       updateQuantityLabel();
       updateSpecialInstruction();
+      updateMilkVolunteerOptions();
     }
 
     async function submitPledge(evt){
       evt.preventDefault();
       const name=clean($('f-name').value), mobile=clean($('f-mobile').value), building=clean($('f-building').value), flat=clean($('f-flat').value), item=clean($('f-item').value), quantity=parseFloat($('f-qty').value);
+      const paidTo=$('pledge-form').querySelector('input[name="milk-paid-to"]:checked')?.value||'';
       const msg=$('form-msg');
       if(!name||!building||!flat||!item||!quantity||quantity<=0){
         msg.className='form-msg err';msg.textContent='Please fill Name, Building, Flat, Item and a valid Quantity.';msg.classList.remove('hidden');
@@ -290,7 +313,7 @@
         const response=await fetch(API_URL,{
           method:'POST',
           headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({action:'addAnnadanResponse',payload:{ name, mobile, building, flat, item, quantity }})
+          body:JSON.stringify({action:'addAnnadanResponse',payload:{ name, mobile, building, flat, item, quantity, paidTo }})
         });
         const result=await response.json();
         if(result.status!=='success') throw new Error(result.message||'Could not save pledge.');
@@ -389,6 +412,7 @@
       $('admin-signin-link').classList.add('hidden');
       $('admin-status').innerHTML=`Admin: ${escapeHtml(name||email)} &nbsp;·&nbsp; <button type="button" onclick="signOutAdmin()" style="background:none;border:none;color:inherit;text-decoration:underline;cursor:pointer;font:inherit">Sign out</button>`;
       $('admin-status').classList.remove('hidden');
+      $('admin-summary-downloads').classList.remove('hidden');
       $('admin-download-row').classList.remove('hidden');
     }
     function signOutAdmin(){
@@ -397,6 +421,7 @@
       clearAdminSession();
       $('admin-signin-link').classList.remove('hidden');
       $('admin-status').classList.add('hidden');
+      $('admin-summary-downloads').classList.add('hidden');
       $('admin-download-row').classList.add('hidden');
     }
     async function verifyAdminEmail(email){
@@ -430,8 +455,8 @@
     function parsePledgeRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
       const headers=rows[0].map(normal);
-      const idx={date:headerIndex(headers,['response time','timestamp','time']),name:headerIndex(headers,['name']),mobile:headerIndex(headers,['mobile','phone','contact']),building:headerIndex(headers,['building']),flat:headerIndex(headers,['flat']),item:headerIndex(headers,['item']),qty:headerIndex(headers,['quantity','qty'])};
-      return rows.slice(1).map(row=>({date:clean(row[idx.date]),name:clean(row[idx.name]),mobile:clean(row[idx.mobile]),building:clean(row[idx.building]),flat:clean(row[idx.flat]),item:clean(row[idx.item]),quantity:num(row[idx.qty])})).filter(p=>p.name||p.item);
+      const idx={date:headerIndex(headers,['response time','timestamp','time']),name:headerIndex(headers,['name']),mobile:headerIndex(headers,['mobile','phone','contact']),building:headerIndex(headers,['building']),flat:headerIndex(headers,['flat']),item:headerIndex(headers,['item']),qty:headerIndex(headers,['quantity','qty']),paidTo:headerIndex(headers,['paid to'])};
+      return rows.slice(1).map(row=>({date:clean(row[idx.date]),name:clean(row[idx.name]),mobile:clean(row[idx.mobile]),building:clean(row[idx.building]),flat:clean(row[idx.flat]),item:clean(row[idx.item]),quantity:num(row[idx.qty]),paidTo:clean(row[idx.paidTo])})).filter(p=>p.name||p.item);
     }
 
     // ---- Admin-only donor-level detail export ----
@@ -442,7 +467,8 @@
       {key:'building',header:'Building'},
       {key:'flat',header:'Flat'},
       {key:'item',header:'Item'},
-      {key:'quantity',header:'Quantity (KG)'}
+      {key:'quantity',header:'Quantity (KG)'},
+      {key:'paidTo',header:'Paid To'}
     ];
     async function downloadDetailExcel(){
       if(!annadanDetailRows.length){alert('No pledges recorded yet.');return}
