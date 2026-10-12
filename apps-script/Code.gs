@@ -765,6 +765,7 @@ function getAnnadanMilkVolunteers(ss) {
     const mobiles = String(values[i][colMobile] || '').split(/[\r\n;,|]+/).map(function(value) { return value.trim(); });
     names.forEach(function(name, index) {
       const mobile = mobiles[index] || '';
+      if (/^(volunteer|volunteer name|name)$/i.test(name) || /^(mobile|mobile number|phone|phone number)$/i.test(mobile)) return;
       if (!volunteers.some(function(volunteer) { return volunteer.name === name && volunteer.mobile === mobile; })) {
         volunteers.push({ name: name, mobile: mobile });
       }

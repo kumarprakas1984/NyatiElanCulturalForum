@@ -170,7 +170,7 @@
           </div>
         </div>
         <fieldset id="milk-volunteer-options" class="volunteer-options hidden">
-          <legend>Choose who received or will receive the payment *</legend>
+          <legend>Choose whom you paid or will pay your contribution to *</legend>
           <div id="milk-volunteer-radios"></div>
         </fieldset>
         <p id="f-special-instruction" class="special-instruction hidden" aria-live="polite"></p>
@@ -286,7 +286,7 @@
     function getMilkVolunteers(){
       const seen=new Set();
       return items.filter(item=>item.item.toLowerCase()==='milk').flatMap(item=>item.volunteers||[]).filter(volunteer=>{
-        if(!volunteer.name) return false;
+        if(!volunteer.name||/^(volunteer|volunteer name|name)$/i.test(volunteer.name)||/^(mobile|mobile number|phone|phone number)$/i.test(volunteer.mobile)) return false;
         const key=`${volunteer.name}|${volunteer.mobile}`;
         if(seen.has(key)) return false;
         seen.add(key);
@@ -534,12 +534,13 @@
       try{
         if(!opts.force){
           const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
-          if(cached&&Date.now()-cached.time<CACHE_TTL){items=cached.items;renderItemTiles();return}
+          if(cached&&Date.now()-cached.time<CACHE_TTL){items=cached.items;renderAnnadanMessage();renderItemTiles();return}
         }
         const response=await fetch(`${API_URL}?action=getAnnadanData`,{cache:'no-store'});if(!response.ok)throw new Error('Unable to load data');
         const payload=await response.json();
         items=parseItemRows(payload?.data?.annadanItems||[]);
         localStorage.setItem(CACHE_KEY,JSON.stringify({time:Date.now(),items}));
+        renderAnnadanMessage();
         renderItemTiles();
       }catch(error){$('item-tiles').innerHTML='<div class="error" style="grid-column:1/-1">Annadan data could not be loaded. Please try again in a moment.</div>';$('overall-stat').textContent='Could not connect';console.error(error)}
     }
