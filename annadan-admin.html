@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0F5754">
+  <title>Annadan Received Items • Nyati Elan Cultural Forum</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#241F16;background:#FAF8F4}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 90% 0,#CFEAE8 0,transparent 30%),#FAF8F4}
+    .wrap{width:min(1180px,calc(100% - 28px));margin:auto}.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:25px 0}
+    .brand,.back{color:#146F6C;text-decoration:none;font-weight:800}.brand{color:#241F16}
+    .site-nav-bar{background:linear-gradient(135deg,#0B4240,#082F2E);width:100%;border-radius:14px;margin-bottom:20px}
+    .site-nav-inner{max-width:1180px;margin:auto;display:flex;gap:4px;overflow-x:auto;padding:12px 16px;scrollbar-width:none}
+    .site-nav-inner::-webkit-scrollbar{display:none}.site-nav-link{color:rgba(255,255,255,.72);text-decoration:none;font-weight:700;font-size:.85rem;padding:9px 14px;border-radius:8px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;flex-shrink:0}
+    .site-nav-link:hover,.site-nav-link.active{color:#fff;background:#146F6C}.intro{padding:26px 0 20px}.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;color:#146F6C}
+    h1{font-size:2.2rem;margin:8px 0}.intro p,.muted{color:#6B5D45;line-height:1.55}
+    .panel{background:#fff;border:1px solid #E4DCCD;border-radius:10px;padding:18px;margin-bottom:20px;box-shadow:0 10px 30px rgba(36,31,22,.05)}
+    .toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:14px;margin-bottom:14px}.field{display:grid;gap:5px;min-width:min(280px,100%)}
+    .field label{font-size:.82rem;font-weight:700;color:#4E4433}input{width:100%;border:1px solid #D0C4AE;border-radius:8px;padding:11px 12px;background:#fff;color:#241F16;font:inherit}
+    .btn{border:0;border-radius:8px;padding:11px 15px;font:inherit;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    .btn-primary{background:#146F6C;color:white}.btn-primary:hover{background:#0F5754}.btn:disabled{opacity:.55;cursor:not-allowed}
+    .summary{color:#6B5D45;font-size:.9rem}.table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:760px;text-align:left}
+    th,td{padding:11px 10px;border-bottom:1px solid #EEE8DE;vertical-align:middle}th{font-size:.76rem;text-transform:uppercase;letter-spacing:.04em;color:#6B5D45;background:#FAF8F4}td{font-size:.9rem}
+    td input[type=checkbox]{width:18px;height:18px;accent-color:#146F6C;cursor:pointer}.status{display:inline-flex;padding:4px 8px;border-radius:999px;background:#FFF3D6;color:#8A5A0B;font-size:.78rem;font-weight:800;white-space:nowrap}
+    .status.received{background:#EAF5EF;color:#256648}.notice{padding:12px 14px;border-radius:8px;margin:0 0 16px;font-size:.9rem}.notice.err{background:#fff5f4;color:#b42318;border:1px solid #fecdca}.notice.ok{background:#EAF5EF;color:#256648;border:1px solid #C7E5D3}
+    .draft-list{display:flex;flex-wrap:wrap;gap:9px}.draft-link{color:#126B4F;background:#EAF5EF;border:1px solid #C7E5D3}.hidden{display:none!important}
+    @media(max-width:620px){.topbar{align-items:flex-start}.toolbar{align-items:stretch}.toolbar .btn{width:100%}.panel{padding:13px}}
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header class="wrap topbar"><a class="brand" href="index.html">Nyati Elan Cultural Forum</a><div style="display:flex;align-items:center;gap:14px"><span id="admin-status" class="back hidden"></span><button type="button" id="signout-button" class="back hidden" style="background:none;border:0;cursor:pointer;font:inherit" onclick="signOutAdmin()">Sign out</button><a class="back" href="annadan.html">Back to Annadan</a></div></header>
+  <nav class="site-nav-bar"><div class="site-nav-inner">
+    <a href="app.html#admin" class="site-nav-link"><i class="fas fa-user-shield"></i> Admin</a><a href="app.html#resident" class="site-nav-link"><i class="fas fa-chart-pie"></i> Finance</a><a href="app.html#gallery" class="site-nav-link"><i class="fas fa-images"></i> Gallery</a><a href="app.html#events" class="site-nav-link"><i class="fas fa-calendar-alt"></i> Events</a><a href="participants.html" class="site-nav-link"><i class="fas fa-list-check"></i> Participation</a><a href="annadan.html" class="site-nav-link active"><i class="fas fa-bowl-rice"></i> Annadan</a><a href="stalls.html" class="site-nav-link"><i class="fas fa-store"></i> Stalls</a><a href="prasad.html" class="site-nav-link"><i class="fas fa-hands-praying"></i> Prasad</a><a href="sari.html" class="site-nav-link"><i class="fas fa-shirt"></i> Sari</a>
+  </div></nav>
+  <main class="wrap">
+    <section class="intro"><div class="eyebrow">Admin · Annadan Seva</div><h1>Received items</h1><p>Mark pledged items as received and prepare a WhatsApp confirmation for each donor.</p></section>
+    <section id="signin-panel" class="panel"><h2 style="margin:0 0 6px;font-size:1.2rem">Admin sign-in required</h2><p class="muted" style="margin:0 0 14px">Sign in with a registered admin Google account to view pledge details.</p><div id="admin-gsi-button"></div><p id="signin-error" class="notice err hidden" role="alert"></p></section>
+    <div id="status-message" class="notice hidden" role="status" aria-live="polite"></div>
+    <section id="admin-panel" class="panel hidden">
+      <div class="toolbar"><div class="field"><label for="received-by">Received by volunteer</label><input id="received-by" type="text" autocomplete="name" placeholder="Volunteer name"></div><button id="mark-received-button" type="button" class="btn btn-primary" onclick="markSelectedReceived()">Mark selected received</button></div>
+      <div class="toolbar"><span id="entries-summary" class="summary"></span><label style="display:flex;align-items:center;gap:8px;font-size:.88rem;color:#4E4433"><input id="select-pending" type="checkbox" style="width:18px;height:18px;accent-color:#146F6C"> Select all pending</label></div>
+      <div class="table-scroll"><table><thead><tr><th>Select</th><th>Donor</th><th>Mobile</th><th>Building / Flat</th><th>Item</th><th>Quantity</th><th>Received</th><th>Received by</th></tr></thead><tbody id="pledge-rows"></tbody></table></div>
+    </section>
+    <section id="whatsapp-panel" class="panel hidden"><h2 style="margin:0 0 6px;font-size:1.1rem">WhatsApp confirmations</h2><p class="muted" style="margin:0 0 14px">Open each draft and send it from WhatsApp.</p><div id="whatsapp-drafts" class="draft-list"></div></section>
+  </main>
+  <script>
+    const API_URL='https://script.google.com/macros/s/AKfycbxGXYHXLjZlrnIpIaYkaIO5I-U1W1wOCbuVarEk9kRYKc7AR8MXRJUpmEyOTIWhzyp0/exec';
+    const ADMIN_CLIENT_ID='939061030612-0buu96811vujgankod2cmcjf2t8bc9ih.apps.googleusercontent.com',ADMIN_SESSION_KEY='nyati-admin-session';
+    let adminEmail=null,adminName='',pledgeRows=[],gsiInitialized=false;
+    const $=id=>document.getElementById(id),clean=value=>String(value??'').trim();
+    const escapeHtml=value=>clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function showStatus(message,type){const status=$('status-message');status.textContent=message;status.className=`notice ${type||'ok'}`}
+    function parsePledgeRows(rows){
+      if(!Array.isArray(rows)||rows.length<2)return [];
+      const headers=rows[0].map(value=>clean(value).toLowerCase()),find=names=>headers.findIndex(header=>names.includes(header));
+      const index={name:find(['name']),mobile:find(['mobile','mobile number']),building:find(['building']),flat:find(['flat','flat number']),item:find(['item']),quantity:find(['quantity','qty']),received:find(['received']),receivedBy:find(['received by'])},value=(row,col)=>col<0?'':clean(row[col]);
+      return rows.slice(1).map((row,rowIndex)=>({rowNumber:rowIndex+2,name:value(row,index.name),mobile:value(row,index.mobile),building:value(row,index.building),flat:value(row,index.flat),item:value(row,index.item),quantity:value(row,index.quantity),received:/^(yes|true|received|y|1)$/i.test(value(row,index.received)),receivedBy:value(row,index.receivedBy)})).filter(row=>row.name||row.item);
+    }
+    function renderRows(){
+      const sorted=[...pledgeRows].sort((a,b)=>Number(a.received)-Number(b.received)),pending=sorted.filter(row=>!row.received).length;
+      $('entries-summary').textContent=`${pledgeRows.length} pledge${pledgeRows.length===1?'':'s'} · ${pending} pending`;
+      $('pledge-rows').innerHTML=sorted.length?sorted.map(row=>`<tr><td><input type="checkbox" class="pledge-select" value="${row.rowNumber}" aria-label="Select ${escapeHtml(row.item)} pledged by ${escapeHtml(row.name)}" ${row.received?'disabled':''}></td><td>${escapeHtml(row.name)}</td><td>${escapeHtml(row.mobile||'—')}</td><td>${escapeHtml([row.building,row.flat].filter(Boolean).join(' / ')||'—')}</td><td>${escapeHtml(row.item)}</td><td>${escapeHtml(row.quantity||'—')}</td><td><span class="status ${row.received?'received':''}">${row.received?'Received':'Pending'}</span></td><td>${escapeHtml(row.receivedBy||'—')}</td></tr>`).join(''):'<tr><td colspan="8" class="muted">No pledge entries yet.</td></tr>';
+      document.querySelectorAll('.pledge-select').forEach(input=>input.addEventListener('change',updateSelection));$('select-pending').checked=false;$('select-pending').disabled=pending===0;updateSelection();
+    }
+    function updateSelection(){const selected=document.querySelectorAll('.pledge-select:checked').length;$('mark-received-button').disabled=selected===0;$('select-pending').checked=selected>0&&selected===document.querySelectorAll('.pledge-select:not(:disabled)').length}
+    async function loadAdminData(email,name){
+      const response=await fetch(`${API_URL}?action=getAnnadanResponses&email=${encodeURIComponent(email)}`,{cache:'no-store'}),result=await response.json();
+      if(result.status!=='success')throw new Error(result.message||'Admin access could not be verified.');
+      adminEmail=email;adminName=name||email;pledgeRows=parsePledgeRows(result?.data?.annadanResponses||[]);$('received-by').value=$('received-by').value||name||'';$('admin-status').textContent=`Admin: ${adminName}`;$('admin-status').classList.remove('hidden');$('signout-button').classList.remove('hidden');$('signin-panel').classList.add('hidden');$('admin-panel').classList.remove('hidden');renderRows();
+    }
+    function jwtDecode(token){const base64Url=token.split('.')[1],base64=base64Url.replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(base64).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')))}
+    function saveSession(email,name,exp){try{localStorage.setItem(ADMIN_SESSION_KEY,JSON.stringify({email,name:name||email,exp:(exp||0)*1000}))}catch(error){}}
+    function clearSession(){try{localStorage.removeItem(ADMIN_SESSION_KEY)}catch(error){}}
+    function ensureGsiInitialized(){if(gsiInitialized||!window.google?.accounts?.id)return;google.accounts.id.initialize({client_id:ADMIN_CLIENT_ID,callback:handleCredentialResponse,auto_select:false});google.accounts.id.renderButton($('admin-gsi-button'),{theme:'outline',size:'large',text:'signin_with'});gsiInitialized=true}
+    async function handleCredentialResponse(response){try{const decoded=jwtDecode(response.credential),email=clean(decoded?.email).toLowerCase();await loadAdminData(email,decoded?.name);saveSession(email,decoded?.name,decoded?.exp)}catch(error){$('signin-error').textContent=error.message||'This account is not a registered admin.';$('signin-error').classList.remove('hidden')}}
+    async function initializeAdmin(){
+      try{const session=JSON.parse(localStorage.getItem(ADMIN_SESSION_KEY)||'null');if(session?.email&&session?.exp>Date.now()){await loadAdminData(session.email,session.name);return}}catch(error){}
+      try{await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=resolve;script.onerror=reject;document.head.appendChild(script)});ensureGsiInitialized()}catch(error){$('signin-error').textContent='Google sign-in could not be loaded. Please refresh and try again.';$('signin-error').classList.remove('hidden')}
+    }
+    function signOutAdmin(){clearSession();adminEmail=null;adminName='';pledgeRows=[];$('received-by').value='';$('admin-panel').classList.add('hidden');$('admin-status').classList.add('hidden');$('signout-button').classList.add('hidden');$('signin-panel').classList.remove('hidden')}
+    $('select-pending').addEventListener('change',event=>{document.querySelectorAll('.pledge-select:not(:disabled)').forEach(input=>{input.checked=event.target.checked});updateSelection()});
+    function makeWhatsappDrafts(markedRows){
+      const recipients=new Map();markedRows.forEach(row=>{let phone=clean(row.mobile).replace(/\D/g,'');if(phone.length===10)phone='91'+phone;if(!phone)return;if(!recipients.has(phone))recipients.set(phone,{name:row.name,lines:[]});const location=[row.building,row.flat].filter(Boolean).join('-');recipients.get(phone).lines.push(`• ${row.item}: ${row.quantity}${location?` (${location})`:''}`)});
+      const entries=Array.from(recipients.entries());$('whatsapp-drafts').innerHTML=entries.length?entries.map(([phone,recipient])=>{const message=`*Nyati Elan Cultural Forum - Annadan Received*\n\nDear ${recipient.name||'Resident'},\n\nWe have received your contribution:\n${recipient.lines.join('\n')}\n\nReceived by: ${$('received-by').value.trim()}\n\nThank you for supporting Annadan seva.`;return `<a class="btn draft-link" href="https://wa.me/${phone}?text=${encodeURIComponent(message)}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i> ${escapeHtml(recipient.name||phone)}</a>`}).join(''):'<span class="muted">No mobile numbers were provided for these pledges.</span>';$('whatsapp-panel').classList.remove('hidden');
+    }
+    async function markSelectedReceived(){
+      const rowNumbers=Array.from(document.querySelectorAll('.pledge-select:checked')).map(input=>Number(input.value)),receivedBy=$('received-by').value.trim();
+      if(!rowNumbers.length){showStatus('Select at least one pending pledge.','err');return}if(!receivedBy){showStatus('Enter the receiving volunteer name.','err');$('received-by').focus();return}
+      const button=$('mark-received-button');button.disabled=true;button.textContent='Updating…';
+      try{const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'markAnnadanReceived',payload:{email:adminEmail,receivedBy,rowNumbers}})}),result=await response.json();if(result.status!=='success')throw new Error(result.message||'Could not update received items.');const marked=result?.data?.marked||[];await loadAdminData(adminEmail,adminName);if(marked.length){makeWhatsappDrafts(marked);showStatus(`${marked.length} pledge${marked.length===1?'':'s'} marked received. WhatsApp drafts are ready below.`,'ok')}else showStatus('No pending pledges were updated.','err')}
+      catch(error){showStatus(error.message||'Could not update received items. Please try again.','err')}finally{button.textContent='Mark selected received';updateSelection()}
+    }
+    initializeAdmin();
+  </script>
+</body>
+</html>
