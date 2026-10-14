@@ -297,6 +297,11 @@ function doPost(e) {
       return createJsonResponse({ status: 'success', data: resultMessage });
     }
 
+    if (action === 'markAnnadanReceived') {
+      const result = markAnnadanResponsesReceived(request.payload);
+      return createJsonResponse({ status: 'success', data: result });
+    }
+
     if (action === 'addAnnadanResponse' || action === 'donateAnnadan') {
       const payload = request.payload;
       const resultMessage = saveAnnadanResponse(payload);
@@ -741,10 +746,73 @@ function getAnnadanResponsesForAdmin(email) {
  */
 function getOrCreateAnnadanResponseSheet(ss) {
   const existing = findAnnadanResponseSheet(ss);
-  if (existing) return existing;
-  return getOrCreateSheet(ss, 'Annadan Response', [
+  const sheet = existing || getOrCreateSheet(ss, 'Annadan Response', [
     'Response Time', 'Name', 'Mobile', 'Building', 'Flat', 'Item', 'Quantity'
   ]);
+  let lastCol = Math.max(sheet.getLastColumn(), 1);
+  const headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(function(h) {
+    return String(h).trim().toLowerCase();
+  });
+  if (headers.indexOf('received') === -1) {
+    sheet.getRange(1, ++lastCol).setValue('Received');
+    headers.push('received');
+  }
+  if (headers.indexOf('received by') === -1) {
+    sheet.getRange(1, ++lastCol).setValue('Received by');
+  }
+  return sheet;
+}
+
+function markAnnadanResponsesReceived(payload) {
+  if (!payload || !isRegisteredAdminEmail(payload.email)) {
+    throw new Error('Not authorized. Only registered admins can update Annadan receipts.');
+  }
+  const rowNumbers = Array.isArray(payload.rowNumbers) ? payload.rowNumbers : [];
+  const receivedBy = String(payload.receivedBy || '').trim();
+  if (!rowNumbers.length || !receivedBy) throw new Error('Select pledges and enter the receiving volunteer name.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    const sheet = getOrCreateAnnadanResponseSheet(ss);
+    const lastCol = sheet.getLastColumn();
+    const headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(function(h) {
+      return String(h).trim().toLowerCase();
+    });
+    const colName = headers.findIndex(function(h) { return h === 'name'; });
+    const colMobile = headers.findIndex(function(h) { return h === 'mobile' || h === 'mobile number'; });
+    const colBuilding = headers.findIndex(function(h) { return h === 'building'; });
+    const colFlat = headers.findIndex(function(h) { return h === 'flat' || h === 'flat number'; });
+    const colItem = headers.findIndex(function(h) { return h === 'item'; });
+    const colQuantity = headers.findIndex(function(h) { return h === 'quantity' || h === 'qty'; });
+    const colReceived = headers.indexOf('received');
+    const colReceivedBy = headers.indexOf('received by');
+    const marked = [];
+    const uniqueRows = Array.from(new Set(rowNumbers.map(Number)));
+
+    uniqueRows.forEach(function(rowNumber) {
+      if (!Number.isInteger(rowNumber) || rowNumber < 2 || rowNumber > sheet.getLastRow()) return;
+      const row = sheet.getRange(rowNumber, 1, 1, lastCol).getDisplayValues()[0];
+      if (/^(yes|true|received|y|1)$/i.test(String(row[colReceived] || '').trim())) return;
+      sheet.getRange(rowNumber, colReceived + 1).setValue('Yes');
+      sheet.getRange(rowNumber, colReceivedBy + 1).setValue(receivedBy);
+      marked.push({
+        rowNumber: rowNumber,
+        name: colName === -1 ? '' : row[colName],
+        mobile: colMobile === -1 ? '' : row[colMobile],
+        building: colBuilding === -1 ? '' : row[colBuilding],
+        flat: colFlat === -1 ? '' : row[colFlat],
+        item: colItem === -1 ? '' : row[colItem],
+        quantity: colQuantity === -1 ? '' : row[colQuantity],
+        receivedBy: receivedBy
+      });
+    });
+
+    return { marked: marked, receivedBy: receivedBy };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function getAnnadanMilkVolunteers(ss) {
