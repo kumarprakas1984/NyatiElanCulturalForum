@@ -779,10 +779,38 @@ function getAnnadanMilkVolunteers(ss) {
  * Quantity Received / Quantity Still Needed columns on the Annadan sheet.
  */
 function saveAnnadanResponse(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return saveAnnadanResponseLocked(payload);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function saveAnnadanResponseLocked(payload) {
   if (!payload || !payload.name || !payload.building || !payload.flat || !payload.item || !payload.quantity) {
     throw new Error('Name, Building, Flat, Item and Quantity are required.');
   }
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  recalculateAnnadanTotals(ss);
+  const annadanSheet = getSheetCaseInsensitive(ss, CONFIG.SHEETS.ANNADAN);
+  const annadanValues = annadanSheet ? annadanSheet.getDataRange().getValues() : [];
+  const annadanHeaders = annadanValues.length ? annadanValues[0].map(function(h) { return String(h).trim().toLowerCase(); }) : [];
+  const colItem = annadanHeaders.findIndex(function(h) { return h.indexOf('item') !== -1; });
+  const colRequired = annadanHeaders.findIndex(function(h) { return h.indexOf('required') !== -1; });
+  const colReceived = annadanHeaders.findIndex(function(h) { return h.indexOf('received') !== -1; });
+  const colStillNeeded = annadanHeaders.findIndex(function(h) { return h.indexOf('still needed') !== -1 || h.indexOf('remaining') !== -1; });
+  const itemKey = String(payload.item).trim().toLowerCase();
+  const requirement = annadanValues.slice(1).find(function(row) {
+    return String(row[colItem] || '').trim().toLowerCase() === itemKey;
+  });
+  if (!requirement) throw new Error('This item is not available for pledges.');
+  const stillNeeded = colStillNeeded !== -1
+    ? Number(requirement[colStillNeeded]) || 0
+    : Math.max((Number(requirement[colRequired]) || 0) - (Number(requirement[colReceived]) || 0), 0);
+  if (stillNeeded <= 0) throw new Error('This item is fully met and is no longer accepting pledges.');
+
   const paidTo = String(payload.paidTo || '').trim();
   if (String(payload.item).trim().toLowerCase() === 'milk' && !getAnnadanMilkVolunteers(ss).some(function(volunteer) { return volunteer.name === paidTo; })) {
     throw new Error('Choose a volunteer listed for Milk in the Annadan sheet.');
