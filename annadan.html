@@ -229,6 +229,7 @@
       items.forEach(item=>{totals[item.unit]=(totals[item.unit]||0)+item[field]});
       return Object.entries(totals).map(([unit,total])=>fmtQty(total,unit)).join(' + ');
     }
+    function isItemFullyMet(item){return item.stillNeeded<=0}
 
     function parseItemRows(rows){
       if(!Array.isArray(rows)||rows.length<2)return [];
@@ -255,11 +256,12 @@
     function renderItemTiles(){
       $('overall-stat').textContent=items.length?`${fmtUnitTotals('received')} received of ${fmtUnitTotals('required')} needed, across ${items.length} item${items.length===1?'':'s'}`:'No Annadan requirements listed yet.';
 
-      $('item-tiles').innerHTML=items.length?items.map(it=>{
-        const met=it.stillNeeded<=0 && it.required>0;
+      const displayItems=[...items].sort((a,b)=>Number(isItemFullyMet(a))-Number(isItemFullyMet(b)));
+      $('item-tiles').innerHTML=displayItems.length?displayItems.map(it=>{
+        const met=isItemFullyMet(it);
         const pct=it.required>0?Math.min(100,Math.round((it.received/it.required)*100)):0;
         return `
-        <button type="button" class="item-tile ${met?'met':'needed'}" data-item="${escapeHtml(it.item)}">
+        <button type="button" class="item-tile ${met?'met':'needed'}" data-item="${escapeHtml(it.item)}" ${met?'disabled':''}>
           <div class="it-name">${escapeHtml(it.item)}</div>
           <div class="it-qty">${fmtQty(it.received,it.unit)}</div>
           <div class="it-label">of ${fmtQty(it.required,it.unit)} needed</div>
@@ -268,14 +270,14 @@
         </button>`;
       }).join(''):'<div class="state" style="grid-column:1/-1">No items listed yet. Ask an admin to add rows to the Annadan sheet.</div>';
 
-      $('item-tiles').querySelectorAll('.item-tile').forEach(btn=>{
+      $('item-tiles').querySelectorAll('.item-tile:not(:disabled)').forEach(btn=>{
         btn.addEventListener('click',()=>openPledgeModal(btn.dataset.item));
       });
     }
 
     function populateItemSelect(){
       $('f-item').innerHTML='<option value="">Select an item</option>'+
-        items.map(it=>`<option value="${escapeHtml(it.item)}">${escapeHtml(it.item)}${it.stillNeeded>0?` (${fmtQty(it.stillNeeded,it.unit)} still needed)`:' (fully met)'}</option>`).join('');
+        items.filter(it=>!isItemFullyMet(it)).map(it=>`<option value="${escapeHtml(it.item)}">${escapeHtml(it.item)} (${fmtQty(it.stillNeeded,it.unit)} still needed)</option>`).join('');
       $('f-item').onchange=()=>{updateQuantityLabel();updateSpecialInstruction();updateMilkVolunteerOptions()};
     }
     function updateSpecialInstruction(){
@@ -320,7 +322,7 @@
       $('pledge-modal-overlay').classList.remove('hidden');
       $('form-msg').classList.add('hidden');
       populateItemSelect();
-      if(preselectItem) $('f-item').value=preselectItem;
+      if(preselectItem&&items.some(it=>it.item===preselectItem&&!isItemFullyMet(it))) $('f-item').value=preselectItem;
       updateQuantityLabel();
       updateSpecialInstruction();
       updateMilkVolunteerOptions();
@@ -342,6 +344,11 @@
         msg.className='form-msg err';msg.textContent='Please fill Name, Building, Flat, Item and a valid Quantity.';msg.classList.remove('hidden');
         return;
       }
+      const selectedItem=items.find(it=>it.item===item);
+      if(!selectedItem||isItemFullyMet(selectedItem)){
+        msg.className='form-msg err';msg.textContent='This item is fully met and is no longer accepting pledges. Please choose another item.';msg.classList.remove('hidden');
+        return;
+      }
       const submitBtn=$('submit-btn');
       submitBtn.disabled=true;submitBtn.textContent='Saving…';
       try{
@@ -357,7 +364,7 @@
         await load({force:true});
         setTimeout(closePledgeModal,900);
       }catch(err){
-        msg.className='form-msg err';msg.textContent='Could not save pledge. Please try again.';msg.classList.remove('hidden');
+        msg.className='form-msg err';msg.textContent=err.message||'Could not save pledge. Please try again.';msg.classList.remove('hidden');
         console.error(err);
       }finally{
         submitBtn.disabled=false;submitBtn.textContent='Submit Pledge';
