@@ -612,9 +612,11 @@
                                     class="text-sm font-semibold text-indigo-600 hover:underline flex items-center gap-1.5">
                                     <i class="fas fa-arrow-left"></i> Back to festivals
                                 </button>
-                                <div class="text-right">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-1 text-right">
                                     <p id="festival-detail-label" class="text-xs font-semibold text-indigo-600 uppercase tracking-wide"></p>
-                                    <p id="festival-detail-total" class="text-xl font-bold text-gray-900"></p>
+                                    <div><p class="text-xs text-gray-500">Total Expense</p><p id="festival-detail-total" class="text-lg font-bold text-gray-900"></p></div>
+                                    <div><p class="text-xs text-gray-500">North Expense</p><p id="festival-detail-north-total" class="text-lg font-bold text-sky-800"></p></div>
+                                    <div><p class="text-xs text-gray-500">SouthEast Expense</p><p id="festival-detail-se-total" class="text-lg font-bold text-emerald-800"></p></div>
                                 </div>
                             </div>
                             <div class="mb-4">
@@ -625,13 +627,6 @@
                                             placeholder="Search item, volunteer, receipt, or notes…"
                                             class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                     </div>
-                                    <select id="expense-society-filter" onchange="renderExpenseCards()"
-                                        class="sm:w-48 px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label="Filter expenses by society">
-                                        <option value="ALL">All societies</option>
-                                        <option value="SE">SE</option>
-                                        <option value="N">North</option>
-                                        <option value="UNASSIGNED">Unassigned society</option>
-                                    </select>
                                 </div>
                             </div>
                             <div id="expense-card-list" class="space-y-2.5"></div>
@@ -2184,7 +2179,6 @@
             document.getElementById('festival-tiles-level').classList.add('hidden');
             document.getElementById('festival-detail-level').classList.remove('hidden');
             document.getElementById('festival-detail-label').textContent = festivalName;
-            document.getElementById('expense-society-filter').value = 'ALL';
 
             const categoryHeader = getExpenseCategoryHeader();
             currentFestivalExpenses = categoryHeader
@@ -2198,19 +2192,25 @@
 
         function renderExpenseCards() {
             const query = (document.getElementById('expense-search-input').value || '').trim().toLowerCase();
-            const societyFilter = document.getElementById('expense-society-filter').value;
             const list = document.getElementById('expense-card-list');
 
             const filtered = currentFestivalExpenses.filter(exp => {
-                const society = getExpenseSociety(exp);
-                if (societyFilter === 'UNASSIGNED' ? society !== '' : societyFilter !== 'ALL' && society !== societyFilter) return false;
                 if (!query) return true;
                 const haystack = Object.values(exp).join(' ').toLowerCase();
                 return haystack.includes(query);
             });
 
-            document.getElementById('festival-detail-total').textContent = formatInr(filtered.reduce((total, expense) => total + (parseFloat(expense['Total']) || 0), 0));
-
+            const totals = filtered.reduce((result, expense) => {
+                const total = parseFloat(expense['Total']) || 0;
+                result.total += total;
+                const society = getExpenseSociety(expense);
+                if (society === 'N') result.north += total;
+                if (society === 'SE') result.se += total;
+                return result;
+            }, { total: 0, north: 0, se: 0 });
+            document.getElementById('festival-detail-total').textContent = formatInr(totals.total);
+            document.getElementById('festival-detail-north-total').textContent = formatInr(totals.north);
+            document.getElementById('festival-detail-se-total').textContent = formatInr(totals.se);
             if (filtered.length === 0) {
                 list.innerHTML = `<p class="text-center py-8 text-gray-500 text-sm">No expenses match this search.</p>`;
                 return;
@@ -2224,7 +2224,7 @@
                 const pending = parseFloat(exp['Pending']) || 0;
                 const volunteer = exp['Volunteer'] || exp['Volunteer Name'] || '';
                 const society = getExpenseSociety(exp);
-                const societyLabel = society === 'N' ? 'North' : society === 'SE' ? 'SE' : 'Society not set';
+                const societyLabel = society === 'N' ? 'North' : society === 'SE' ? 'SouthEast' : 'Society not set';
                 const receiptHeader = Object.keys(exp).find(h => /^https?:\/\//i.test(String(exp[h] || '').trim()));
                 const receiptUrl = receiptHeader ? String(exp[receiptHeader]).trim() : '';
 
@@ -2260,6 +2260,14 @@
 
         function normalizeExpenseHeader(header) {
             return String(header || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        function getExpenseSociety(expense) {
+            const header = Object.keys(expense || {}).find(key => normalizeExpenseHeader(key) === 'society');
+            const value = String(header ? expense[header] : '').trim().toUpperCase().replace(/[._-]+/g, ' ').replace(/\s+/g, ' ');
+            if (value === 'N' || value === 'NORTH') return 'N';
+            if (value === 'SE' || value === 'SOUTH EAST' || value === 'SOUTHEAST') return 'SE';
+            return '';
         }
 
         function getExpenseCategoryHeader() {

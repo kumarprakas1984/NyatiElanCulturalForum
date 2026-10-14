@@ -165,9 +165,15 @@
         const response=await fetch(`${API_URL}?action=getStallData`,{cache:'no-store'});
         const result=await response.json();
         const dates=result?.data?.stallDates||[];
-        $('f-date').innerHTML=dates.length
-          ? '<option value="">Select a date</option>'+dates.map(d=>`<option value="${d}">${d}</option>`).join('')
-          : '<option value="">No stall dates configured yet</option>';
+        if(dates.length===1){
+          const dateInput=document.createElement('input');
+          dateInput.type='text';dateInput.id='f-date';dateInput.value=dates[0];dateInput.readOnly=true;dateInput.required=true;
+          $('f-date').replaceWith(dateInput);
+        }else{
+          $('f-date').innerHTML=dates.length
+            ? '<option value="">Select a date</option>'+dates.map(d=>`<option value="${d}">${d}</option>`).join('')
+            : '<option value="">No stall dates configured yet</option>';
+        }
       }catch(e){
         $('f-date').innerHTML='<option value="">Could not load dates — please try again</option>';
         console.error(e);
