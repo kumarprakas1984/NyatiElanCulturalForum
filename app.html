@@ -487,9 +487,9 @@
                 <!-- Net Balance banner -->
                 <div class="bg-gradient-to-br from-[#1B4D36] to-[#256648] text-white rounded-2xl p-6 flex items-center justify-between gap-4 shadow-md">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-white/75">Net Balance Available</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-white/75">SE Net Balance Available</p>
                         <p id="net-balance-banner" class="text-3xl md:text-4xl font-bold mt-1">₹0</p>
-                        <p class="text-sm text-white/70 mt-1">Collection minus expenses, live</p>
+                        <p class="text-sm text-white/70 mt-1">SE collection minus SE expenses, live</p>
                     </div>
                     <div class="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center text-2xl flex-shrink-0">
                         <i class="fas fa-wallet"></i>
@@ -540,6 +540,16 @@
                         <div class="bg-[#EAF5EF] p-4 rounded-xl border border-[#C7E5D3]">
                             <p class="text-xs md:text-sm font-medium text-[#256648]">Balance</p>
                             <p id="final-balance" class="text-2xl md:text-3xl font-bold text-[#1B4D36] mt-1">₹0</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h3 class="text-sm font-bold text-gray-700 mb-2">Society-wise Finance</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                            <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-lg"><p class="text-xs font-medium text-emerald-800">SE Collection</p><p id="se-collection" class="text-lg font-bold text-emerald-900 mt-1">₹0</p></div>
+                            <div class="bg-sky-50 border border-sky-100 p-3 rounded-lg"><p class="text-xs font-medium text-sky-800">North Collection</p><p id="north-collection" class="text-lg font-bold text-sky-900 mt-1">₹0</p></div>
+                            <div class="bg-rose-50 border border-rose-100 p-3 rounded-lg"><p class="text-xs font-medium text-rose-800">SE Expenses</p><p id="se-expenses" class="text-lg font-bold text-rose-900 mt-1">₹0</p></div>
+                            <div class="bg-amber-50 border border-amber-100 p-3 rounded-lg"><p class="text-xs font-medium text-amber-800">North Expenses</p><p id="north-expenses" class="text-lg font-bold text-amber-900 mt-1">₹0</p></div>
                         </div>
                     </div>
 
@@ -608,11 +618,20 @@
                                 </div>
                             </div>
                             <div class="mb-4">
-                                <div class="relative">
-                                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                                    <input type="search" id="expense-search-input" oninput="renderExpenseCards()"
-                                        placeholder="Search item, volunteer, receipt, or notes…"
-                                        class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <div class="flex flex-col sm:flex-row gap-2">
+                                    <div class="relative flex-1">
+                                        <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                                        <input type="search" id="expense-search-input" oninput="renderExpenseCards()"
+                                            placeholder="Search item, volunteer, receipt, or notes…"
+                                            class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    </div>
+                                    <select id="expense-society-filter" onchange="renderExpenseCards()"
+                                        class="sm:w-48 px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label="Filter expenses by society">
+                                        <option value="ALL">All societies</option>
+                                        <option value="SE">SE</option>
+                                        <option value="N">North</option>
+                                        <option value="UNASSIGNED">Unassigned society</option>
+                                    </select>
                                 </div>
                             </div>
                             <div id="expense-card-list" class="space-y-2.5"></div>
@@ -1149,6 +1168,22 @@
             "E1": "N",
             "F3": "N",
         };
+
+        function getBuildingSociety(building) {
+            const normalized = String(building || '').trim().toUpperCase();
+            const northBuilding = Object.keys(BUILDING_REGIONS).some(name => name.toUpperCase() === normalized);
+            if (northBuilding) return 'N';
+            const configuredBuilding = Object.keys(BUILDINGS).some(name => name.toUpperCase() === normalized);
+            return configuredBuilding ? 'SE' : '';
+        }
+
+        function getExpenseSociety(expense) {
+            const header = Object.keys(expense || {}).find(key => normalizeExpenseHeader(key) === 'society');
+            const value = String(header ? expense[header] : '').trim().toUpperCase().replace(/[._-]+/g, ' ').replace(/\s+/g, ' ');
+            if (value === 'N' || value === 'NORTH') return 'N';
+            if (value === 'SE' || value === 'SOUTH EAST' || value === 'SOUTHEAST') return 'SE';
+            return '';
+        }
 
         // --- INITIALIZATION & AUTHENTICATION ---
         // The loader overlay is visible in the markup on first paint, so every
@@ -1955,6 +1990,19 @@
                 actualExpenseNum = liveExpenses;
             }
 
+            const regionalCollections = { N: 0, SE: 0 };
+            (residents || []).forEach(resident => {
+                if (resident.status !== 'Paid') return;
+                const society = getBuildingSociety(resident.building);
+                if (society) regionalCollections[society] += parseFloat(resident.amount) || 0;
+            });
+
+            const regionalExpenses = { N: 0, SE: 0 };
+            (expenses || []).forEach(expense => {
+                const society = getExpenseSociety(expense);
+                if (society) regionalExpenses[society] += parseFloat(expense.Total) || 0;
+            });
+
             const totalFunds = carryoverNum + collectionNum;
             const finalBalance = (totalFunds - actualExpenseNum - committedExpenseNum);
 
@@ -1967,6 +2015,12 @@
                 actualExpense: fmt(actualExpenseNum),
                 committedExpense: fmt(committedExpenseNum),
                 balance: fmt(finalBalance),
+                seCollection: fmt(regionalCollections.SE),
+                northCollection: fmt(regionalCollections.N),
+                seExpenses: fmt(regionalExpenses.SE),
+                northExpenses: fmt(regionalExpenses.N),
+                seAvailableBalance: fmt(regionalCollections.SE - regionalExpenses.SE),
+                seAvailableBalanceNum: regionalCollections.SE - regionalExpenses.SE,
                 collectionNum, actualExpenseNum, committedExpenseNum, finalBalanceNum: finalBalance
             };
         }
@@ -1978,11 +2032,15 @@
             document.getElementById('actual-expense').innerText = summaryData.actualExpense || '₹0';
             document.getElementById('committed-expense').innerText = summaryData.committedExpense || '₹0';
             document.getElementById('final-balance').innerText = summaryData.balance || '₹0';
+            document.getElementById('se-collection').innerText = summaryData.seCollection || '₹0';
+            document.getElementById('north-collection').innerText = summaryData.northCollection || '₹0';
+            document.getElementById('se-expenses').innerText = summaryData.seExpenses || '₹0';
+            document.getElementById('north-expenses').innerText = summaryData.northExpenses || '₹0';
 
             const fmtInr = (n) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
 
             // Net Balance banner
-            document.getElementById('net-balance-banner').innerText = fmtInr(summaryData.finalBalanceNum);
+            document.getElementById('net-balance-banner').innerText = fmtInr(summaryData.seAvailableBalanceNum);
 
             // Overall progress: residents only, "Other" (vendors) stays out of this public view
             const publicResidents = allResidents.filter(r => r.building !== 'Other');
@@ -2126,6 +2184,7 @@
             document.getElementById('festival-tiles-level').classList.add('hidden');
             document.getElementById('festival-detail-level').classList.remove('hidden');
             document.getElementById('festival-detail-label').textContent = festivalName;
+            document.getElementById('expense-society-filter').value = 'ALL';
 
             const categoryHeader = getExpenseCategoryHeader();
             currentFestivalExpenses = categoryHeader
@@ -2139,13 +2198,18 @@
 
         function renderExpenseCards() {
             const query = (document.getElementById('expense-search-input').value || '').trim().toLowerCase();
+            const societyFilter = document.getElementById('expense-society-filter').value;
             const list = document.getElementById('expense-card-list');
 
             const filtered = currentFestivalExpenses.filter(exp => {
+                const society = getExpenseSociety(exp);
+                if (societyFilter === 'UNASSIGNED' ? society !== '' : societyFilter !== 'ALL' && society !== societyFilter) return false;
                 if (!query) return true;
                 const haystack = Object.values(exp).join(' ').toLowerCase();
                 return haystack.includes(query);
             });
+
+            document.getElementById('festival-detail-total').textContent = formatInr(filtered.reduce((total, expense) => total + (parseFloat(expense['Total']) || 0), 0));
 
             if (filtered.length === 0) {
                 list.innerHTML = `<p class="text-center py-8 text-gray-500 text-sm">No expenses match this search.</p>`;
@@ -2159,6 +2223,8 @@
                 const given = parseFloat(exp['Given']) || 0;
                 const pending = parseFloat(exp['Pending']) || 0;
                 const volunteer = exp['Volunteer'] || exp['Volunteer Name'] || '';
+                const society = getExpenseSociety(exp);
+                const societyLabel = society === 'N' ? 'North' : society === 'SE' ? 'SE' : 'Society not set';
                 const receiptHeader = Object.keys(exp).find(h => /^https?:\/\//i.test(String(exp[h] || '').trim()));
                 const receiptUrl = receiptHeader ? String(exp[receiptHeader]).trim() : '';
 
@@ -2167,6 +2233,7 @@
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 ${festival ? `<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 inline-block mb-1.5">${escapeHtml(festival)}</span>` : ''}
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 inline-block mb-1.5">${societyLabel}</span>
                                 <p class="font-bold text-gray-900 truncate">${escapeHtml(item)}</p>
                                 <div class="flex items-center gap-3 text-xs text-gray-500 mt-1 flex-wrap">
                                     ${volunteer ? `<span><i class="fas fa-user text-gray-400"></i> ${escapeHtml(volunteer)}</span>` : ''}
